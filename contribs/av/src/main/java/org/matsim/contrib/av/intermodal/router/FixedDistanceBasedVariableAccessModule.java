@@ -50,6 +50,9 @@ import org.opengis.feature.simple.SimpleFeature;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.MultiPolygon;
+import com.vividsolutions.jts.geom.Polygon;
+import com.vividsolutions.jts.geom.prep.PreparedPolygon;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
 
@@ -65,11 +68,7 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 	
 	private Map<String,Boolean> teleportedModes = new HashMap<>();
 	private Map<Integer,String> distanceMode = new TreeMap<>();
-	private Map<String, Double> minXVariableAccessArea = new HashMap<>();
-	private Map<String, Double> minYVariableAccessArea = new HashMap<>();
-	private Map<String, Double> maxXVariableAccessArea = new HashMap<>();
-	private Map<String, Double> maxYVariableAccessArea = new HashMap<>();
-	private Map<String, Geometry> geometriesVariableAccessArea = new HashMap<>();
+	private Map<String, PreparedPolygon> geometriesVariableAccessArea = new HashMap<>();
 	 // surcharge only applied to trips starting or ending in the variable access area
 	private Map<Coord, Double> discouragedTransitStopCoord2TimeSurcharge = new HashMap<>();
 	
@@ -85,20 +84,16 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 		VariableAccessConfigGroup vaconfig = (VariableAccessConfigGroup) config.getModules().get(VariableAccessConfigGroup.GROUPNAME);
 		if(vaconfig.getVariableAccessAreaShpFile() != null && vaconfig.getVariableAccessAreaShpKey() != null){
 			geometriesVariableAccessArea = readShapeFileAndExtractGeometry(vaconfig.getVariableAccessAreaShpFile(), vaconfig.getVariableAccessAreaShpKey());
-			for(String name: geometriesVariableAccessArea.keySet()){
-				Envelope e = geometriesVariableAccessArea.get(name).getEnvelopeInternal();
-				minXVariableAccessArea.put(name, e.getMinX());
-				minYVariableAccessArea.put(name, e.getMinY());
-				maxXVariableAccessArea.put(name, e.getMaxX());
-				maxYVariableAccessArea.put(name, e.getMaxY());
-			}
 		}
 		teleportedModes.put(TransportMode.transit_walk, true);
 		
 		// for av scenario Heiligensee, Konradshoehe
 		// S25 service every 20 min -> 10 min mean wait time
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4584548.0, 5831850.0), 10*60.); // S Schulzendorf
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4583339.0, 5833154.0), 10*60.); // S Heiligensee
+		// U6 service every 5 min -> 2.5 min mean wait time -> 7.5 min less
+		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4584548.0, 5831850.0), 7.5*60.); // S Schulzendorf
+		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4583339.0, 5833154.0), 7.5*60.); // S Heiligensee
+		// Bus stop An der Mühle/Karolinenstraße, 1 stop before U Alt-Tegel
+		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4586906.0, 5829745.0), 2.5*60.);
 		// Bus lines across river Havel or Tegeler See -> inaccessible
 		// Bus 136
 		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4581591.0, 5832750.0), 10*60*60.);
@@ -235,8 +230,8 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 		return this.teleportedModes.get(mode);
 	}
 	
-	public static Map<String,Geometry> readShapeFileAndExtractGeometry(String filename, String key){
-		Map<String,Geometry> geometry = new HashMap<>();	
+	public static Map<String, PreparedPolygon> readShapeFileAndExtractGeometry(String filename, String key){
+		Map<String,PreparedPolygon> geometry = new HashMap<>();	
 		for (SimpleFeature ft : ShapeFileReader.getAllFeatures(filename)) {
 			
 				GeometryFactory geometryFactory= new GeometryFactory();
@@ -244,8 +239,10 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 
 				try {
 					Geometry geo = wktReader.read((ft.getAttribute("the_geom")).toString());
+					MultiPolygon poly = (MultiPolygon) geo;
+					PreparedPolygon preparedPoly = new PreparedPolygon(poly);
 					String lor = ft.getAttribute(key).toString();
-					geometry.put(lor, geo);
+					geometry.put(lor, preparedPoly);
 				} catch (ParseException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -257,11 +254,8 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 	private boolean isInVariableAccessArea(Coord coord){
 		if(geometriesVariableAccessArea.size() > 0){
 			for(String name: geometriesVariableAccessArea.keySet()){
-				if(minXVariableAccessArea.get(name) < coord.getX() && maxXVariableAccessArea.get(name) > coord.getX() &&
-						minYVariableAccessArea.get(name) < coord.getY() && maxYVariableAccessArea.get(name) > coord.getY()){
-					if(geometriesVariableAccessArea.get(name).contains(MGC.coord2Point(coord))){
-						return true;
-					}
+				if(geometriesVariableAccessArea.get(name).contains(MGC.coord2Point(coord))){
+					return true;
 				}
 			}
 			return false;
