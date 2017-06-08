@@ -39,7 +39,7 @@ public class RunDRT {
 		Config config = ConfigUtils.loadConfig(FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_CONFIG_BERLIN__10PCT_DRT,
 				new DrtConfigGroup(), new DvrpConfigGroup());
 		VariableAccessConfigGroup vacfg = new VariableAccessConfigGroup();
-		vacfg.setVariableAccessAreaShpFile(FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_AV_OPERATION_AREA_SHP);
+		vacfg.setVariableAccessAreaShpFile(FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_AV_OPERATION_AREA_SIMPLIFIED_SHP);
 		vacfg.setVariableAccessAreaShpKey(FilePaths.AV_OPERATION_AREA_SHP_KEY);
 		vacfg.setStyle("fixed"); //FixedDistanceBasedVariableAccessModule
 		{
@@ -69,7 +69,8 @@ public class RunDRT {
 //		config.plans().setInputFile("../../../../" + "data/output/Berlin10pct/drt_300m_routing_drt_20ms/DRT_50_Cap4/ITERS/it.0/0.plans.xml.gz");
 		config.transit().setVehiclesFile("../../../../" + FilePaths.PATH_TRANSIT_VEHICLES_BERLIN__10PCT);
 		config.transit().setTransitScheduleFile("../../../../" + FilePaths.PATH_TRANSIT_SCHEDULE_BERLIN__10PCT_WITHOUT_BUSES_IN_STUDY_AREA);
-		config.transitRouter().setSearchRadius(15000);
+		// initially config.transitRouter().setSearchRadius(15000);
+		config.transitRouter().setSearchRadius(8000);
 		config.transitRouter().setExtensionRadius(0);
 		config.global().setNumberOfThreads(4);
 		config.transitRouter().setDirectWalkFactor(100);
@@ -122,7 +123,7 @@ public class RunDRT {
 		}
 		DrtPtTripEventHandler eventHandler = new DrtPtTripEventHandler(scenario.getNetwork(), monitoredModes, null);//linksInArea);
 		events.addHandler(eventHandler);
-		new MatsimEventsReader(events).readFile(config.controler().getOutputDirectory() + "/output_events.xml.gz");
+		new MatsimEventsReader(events).readFile(config.controler().getOutputDirectory() + "/ITERS/it.0/0.events.xml.gz");
 		System.out.println("Start writing trips of " + eventHandler.getPerson2ExperiencedTrips().size() + " agents.");
 		ExperiencedTripsWriter tripsWriter = new ExperiencedTripsWriter(outputDirectory + "/experiencedTrips.csv", 
 				eventHandler.getPerson2ExperiencedTrips(), monitoredModes);

@@ -22,15 +22,17 @@
  */
 package org.matsim.contrib.av.intermodal.router;
 
-import java.util.ArrayList;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
@@ -39,6 +41,7 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Route;
 import org.matsim.contrib.av.intermodal.router.config.VariableAccessConfigGroup;
 import org.matsim.core.config.Config;
+import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.routes.GenericRouteImpl;
@@ -47,11 +50,9 @@ import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.gis.ShapeFileReader;
 import org.opengis.feature.simple.SimpleFeature;
 
-import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.MultiPolygon;
-import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.geom.prep.PreparedPolygon;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
@@ -69,8 +70,12 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 	private Map<String,Boolean> teleportedModes = new HashMap<>();
 	private Map<Integer,String> distanceMode = new TreeMap<>();
 	private Map<String, PreparedPolygon> geometriesVariableAccessArea = new HashMap<>();
-	 // surcharge only applied to trips starting or ending in the variable access area
-	private Map<Coord, Double> discouragedTransitStopCoord2TimeSurcharge = new HashMap<>();
+	 // time surcharge is only applied to trips starting or ending in the variable access area
+	/** full time surcharge always applied */
+	private Map<Coord, Double> discouragedCoord2TimeSurchargeFixed = new HashMap<>();
+	/** choose randomly between no or full time surcharge to be applied */
+	private Map<Coord, Double> discouragedCoord2TimeSurchargeRandomOnOff = new HashMap<>();
+	private final Random rand = MatsimRandom.getRandom();
 	
 	private final Network carnetwork;
 	private final Config config;
@@ -85,48 +90,10 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 		if(vaconfig.getVariableAccessAreaShpFile() != null && vaconfig.getVariableAccessAreaShpKey() != null){
 			geometriesVariableAccessArea = readShapeFileAndExtractGeometry(vaconfig.getVariableAccessAreaShpFile(), vaconfig.getVariableAccessAreaShpKey());
 		}
+		if(vaconfig.getCoords2TimeSurchargeFile() != null){
+			readCoord2SurchargeFile(vaconfig.getCoords2TimeSurchargeFile());
+		}
 		teleportedModes.put(TransportMode.transit_walk, true);
-		
-		// for av scenario Heiligensee, Konradshoehe
-		// S25 service every 20 min -> 10 min mean wait time
-		// U6 service every 5 min -> 2.5 min mean wait time -> 7.5 min less
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4584548.0, 5831850.0), 7.5*60.); // S Schulzendorf
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4583339.0, 5833154.0), 7.5*60.); // S Heiligensee
-		// Bus stop An der Mühle/Karolinenstraße, 1 stop before U Alt-Tegel
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4586906.0, 5829745.0), 2.5*60.);
-		// Bus lines across river Havel or Tegeler See -> inaccessible
-		// Bus 136
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4581591.0, 5832750.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4581669.0, 5831774.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4581497.6418, 5831745.5566), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4581429.0, 5831400.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4581312.2374, 5831242.7166), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4581260.0, 5830890.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4581377.0, 5830535.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4581547.0, 5829967.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4581923.0, 5828614.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4582131.0, 5827991.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4582238.0, 5827622.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4582314.0, 5827362.0), 20*60.); //ferry to Tegelort
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4582293.0, 5827026.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4582144.0, 5826847.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4582187.0, 5826715.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4582100.0, 5826487.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4582544.0, 5826421.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4582070.4177, 5826076.2695), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4582036.0171, 5825885.0392), 10*60*60.);
-		// Bus 139, 236
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4582332.0, 5826025.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4582770.0, 5825930.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4582760.0, 5825520.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4583330.0, 5825680.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4583240.0, 5825340.0), 10*60*60.);
-		// Bus 133
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4585180.0, 5826171.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4585408.0, 5826845.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4585571.0, 5827345.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4585857.0, 5827693.0), 10*60*60.);
-		discouragedTransitStopCoord2TimeSurcharge.put(new Coord(4586403.0, 5827736.0), 10*60*60.);
 	}
 	/**
 	 * 
@@ -144,9 +111,7 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 			distanceMode.put(maximumAccessDistance, mode);
 		} else {
 			teleportedModes.put(mode, false);
-			distanceMode.put(maximumAccessDistance,mode);
-			
-			
+			distanceMode.put(maximumAccessDistance, mode);
 		}
 	}
 	
@@ -163,10 +128,14 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 		boolean isStartInVariableAccessArea = isInVariableAccessArea(coord);
 		boolean isEndInVariableAccessArea = isInVariableAccessArea(toCoord);
 		if (isStartInVariableAccessArea || isEndInVariableAccessArea) {
-			if (discouragedTransitStopCoord2TimeSurcharge.containsKey(coord)) {
-				discouragedTransitStopTimeSurcharge = discouragedTransitStopCoord2TimeSurcharge.get(coord);
-			} else if(discouragedTransitStopCoord2TimeSurcharge.containsKey(toCoord)) {
-				discouragedTransitStopTimeSurcharge = discouragedTransitStopCoord2TimeSurcharge.get(toCoord);
+			if (discouragedCoord2TimeSurchargeFixed.containsKey(coord)) {
+				discouragedTransitStopTimeSurcharge = discouragedCoord2TimeSurchargeFixed.get(coord);
+			} else if (discouragedCoord2TimeSurchargeFixed.containsKey(toCoord)) {
+				discouragedTransitStopTimeSurcharge = discouragedCoord2TimeSurchargeFixed.get(toCoord);
+			} else if (discouragedCoord2TimeSurchargeRandomOnOff.containsKey(coord) && rand.nextBoolean()) {
+				discouragedTransitStopTimeSurcharge = discouragedCoord2TimeSurchargeRandomOnOff.get(coord);
+			} else if (discouragedCoord2TimeSurchargeRandomOnOff.containsKey(toCoord) && rand.nextBoolean()) {
+				discouragedTransitStopTimeSurcharge = discouragedCoord2TimeSurchargeRandomOnOff.get(toCoord);
 			}
 		}
 		if (isStartInVariableAccessArea && isEndInVariableAccessArea){
@@ -261,6 +230,40 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 			return false;
 		} else {			
 			return true;
+		}
+	}
+	
+	private void readCoord2SurchargeFile(String filename){
+		try {
+			BufferedReader coords2SurchargeReader = new BufferedReader(new FileReader(filename));
+			String line;
+			// check header
+			if (coords2SurchargeReader.readLine().equals("coordX,coordY,timeSurcharge,type")) {
+				while((line = coords2SurchargeReader.readLine()) != null){
+					// ignore comments after "//"
+					String[] lineSplits = line.split("//")[0].split(",");
+					if(lineSplits.length == 4) { // else ignore
+						Coord coord = new Coord(Double.parseDouble(lineSplits[0]), Double.parseDouble(lineSplits[1]));
+						if(lineSplits[3].equals("fixed")){
+							discouragedCoord2TimeSurchargeFixed.put(coord, Double.parseDouble(lineSplits[2]));
+						} else if (lineSplits[3].equals("randomOnOff")) {
+							discouragedCoord2TimeSurchargeRandomOnOff.put(coord, Double.parseDouble(lineSplits[2]));
+						} else {
+							throw new RuntimeException("unknown discouragedCoord2TimeSurcharge type: " + 
+									lineSplits[3]);
+						}
+					}
+				}
+			} else {
+				throw new RuntimeException("unknown header in Coord2SurchargeFile, should be: coordX,coordY,timeSurcharge,type");
+			}
+			coords2SurchargeReader.close();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 	

@@ -43,12 +43,14 @@ public class VariableAccessConfigGroup extends ReflectiveConfigGroup {
 	private static final String MODE = "mode";
 	private static final String AREA_FILE = "VariableAccessAreaShpFile";
 	private static final String AREA_KEY = "VariableAccessAreaShpKey";
+	private static final String COORDS2TIME_SURCHARGE_FILE = "coords2TimeSurchargeFile";
 	private String style = "fixed";
 	private String mode = "pt";
 
 	private String transitScheduleFile = null;
 	private String variableAccessAreaShpFile = null;
 	private String variableAccessAreaShpKey = null;
+	private String coords2TimeSurchargeFile = null;
 	
 	public static final String MODEGROUPNAME = "variableAccessMode";
 
@@ -119,6 +121,7 @@ public class VariableAccessConfigGroup extends ReflectiveConfigGroup {
 		this.variableAccessAreaShpFile = variableAccessAreaShpFile;
 	}
 	
+	
 	/**
 	 * @return the variableAccessAreaShpKey
 	 */
@@ -133,6 +136,32 @@ public class VariableAccessConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(AREA_KEY)
 	public void setVariableAccessAreaShpKey(String variableAccessAreaShpKey) {
 		this.variableAccessAreaShpKey = variableAccessAreaShpKey;
+	}
+	
+	/**
+	 * @return the coords2TimeSurchargeFile containing the coords and time surcharges
+	 * applied to them. Can be used for example to make some TransitStops less attractive
+	 * than others. Is only applied to routes starting or ending in the variable access area
+	 * Without any file given the default is to use variable access for all routes.
+	 */
+	@StringGetter(COORDS2TIME_SURCHARGE_FILE)
+	public String getCoords2TimeSurchargeFile() {
+		return coords2TimeSurchargeFile;
+	}
+	
+	public URL getCoords2TimeSurchargeFile(URL context) {
+		return ConfigGroup.getInputFileURL(context, getCoords2TimeSurchargeFile() ) ;
+	}	
+	/**
+	 * @param coords2TimeSurchargeFile the coords2TimeSurchargeFile to set 
+	 * containing the coords and time surcharges
+	 * applied to them. Can be used for example to make some TransitStops less attractive
+	 * than others. Is only applied to routes starting or ending in the variable access area
+	 * Without any file given the default is to use variable access for all routes.
+	 */
+	@StringSetter(COORDS2TIME_SURCHARGE_FILE)
+	public void setCoords2TimeSurchargeFile(String coords2TimeSurchargeFile) {
+		this.coords2TimeSurchargeFile = coords2TimeSurchargeFile;
 	}
 	
 	/**

@@ -87,6 +87,7 @@ public class FilePaths {
 	public final static String STUDY_AREA_SHP_ELEMENT = "1"; // key for the element containing the study area
 	/** AV Operation Area */
 	public final static String PATH_AV_OPERATION_AREA_SHP = "data/input/Untersuchungsraum shp/av_operation_area.shp";
+	public final static String PATH_AV_OPERATION_AREA_SIMPLIFIED_SHP = "data/input/Untersuchungsraum shp/av_operation_area_simplified.shp";
 	public final static String AV_OPERATION_AREA_SHP_KEY = "id"; // name of the key column
 	public final static String AV_OPERATION_AREA_SHP_ELEMENT = "1"; // key for the element containing the study area
 
