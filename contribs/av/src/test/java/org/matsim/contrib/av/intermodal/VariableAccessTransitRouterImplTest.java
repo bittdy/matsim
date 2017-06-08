@@ -9,7 +9,7 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.contrib.av.intermodal.router.FixedDistanceBasedVariableAccessModule;
+import org.matsim.contrib.av.intermodal.router.DistanceBasedVariableAccessModule;
 import org.matsim.contrib.av.intermodal.router.VariableAccessTransitRouterImpl;
 import org.matsim.contrib.taxi.run.TaxiConfigGroup;
 import org.matsim.core.config.Config;
@@ -78,8 +78,8 @@ public class VariableAccessTransitRouterImplTest {
 		TravelTime travelTime = transitRouterNetworkTravelTimeAndDisutility;
 		TransitTravelDisutility travelDisutility = transitRouterNetworkTravelTimeAndDisutility;
 		
-		FixedDistanceBasedVariableAccessModule variableAccessModule = 
-				new FixedDistanceBasedVariableAccessModule(scenario.getNetwork(), config);
+		DistanceBasedVariableAccessModule variableAccessModule = 
+				new DistanceBasedVariableAccessModule(scenario.getNetwork(), config);
 		variableAccessModule.registerMode("av", 4500, false);
 		variableAccessModule.registerMode("walk", 2000, true);
 		variableAccessModule.registerMode("bike", 4000, true);

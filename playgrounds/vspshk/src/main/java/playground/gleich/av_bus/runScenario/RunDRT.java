@@ -41,7 +41,8 @@ public class RunDRT {
 		VariableAccessConfigGroup vacfg = new VariableAccessConfigGroup();
 		vacfg.setVariableAccessAreaShpFile(FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_AV_OPERATION_AREA_SIMPLIFIED_SHP);
 		vacfg.setVariableAccessAreaShpKey(FilePaths.AV_OPERATION_AREA_SHP_KEY);
-		vacfg.setStyle("fixed"); //FixedDistanceBasedVariableAccessModule
+		vacfg.setStyle("flexible"); //FixedDistanceBasedVariableAccessModule
+		vacfg.setMaxDistanceOnlyTransitWalkAvailable(0);
 		{
 			VariableAccessModeConfigGroup drt = new VariableAccessModeConfigGroup();
 			drt.setDistance(20000);
@@ -50,11 +51,11 @@ public class RunDRT {
 			vacfg.setAccessModeGroup(drt);
 		}
 		{
-			VariableAccessModeConfigGroup walk = new VariableAccessModeConfigGroup();
-			walk.setDistance(300);
-			walk.setTeleported(true);
-			walk.setMode(TransportMode.transit_walk);
-			vacfg.setAccessModeGroup(walk);
+			VariableAccessModeConfigGroup transit_walk = new VariableAccessModeConfigGroup();
+			transit_walk.setDistance(1000);
+			transit_walk.setTeleported(true);
+			transit_walk.setMode(TransportMode.transit_walk);
+			vacfg.setAccessModeGroup(transit_walk);
 		}
 		config.addModule(vacfg);
 
@@ -64,7 +65,7 @@ public class RunDRT {
 		
 		// ScenarioUtils.loadScenario(config) searches files starting at the directory where the config is located
 		config.network().setInputFile("../../../../" + FilePaths.PATH_NETWORK_BERLIN__10PCT_DRT_ACCESS_LOOPS);
-		config.plans().setInputFile("../../../../" + FilePaths.PATH_POPULATION_BERLIN__10PCT_FILTERED_1000);
+		config.plans().setInputFile("../../../../" + FilePaths.PATH_POPULATION_BERLIN__10PCT_FILTERED);
 //		config.plans().setInputFile("../../../../" + "data/input/Berlin10pct/mod/population.10pct.filtered.6Agents.xml");
 //		config.plans().setInputFile("../../../../" + "data/output/Berlin10pct/drt_300m_routing_drt_20ms/DRT_50_Cap4/ITERS/it.0/0.plans.xml.gz");
 		config.transit().setVehiclesFile("../../../../" + FilePaths.PATH_TRANSIT_VEHICLES_BERLIN__10PCT);

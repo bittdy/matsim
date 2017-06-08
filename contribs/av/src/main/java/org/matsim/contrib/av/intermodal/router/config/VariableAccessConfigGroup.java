@@ -44,9 +44,10 @@ public class VariableAccessConfigGroup extends ReflectiveConfigGroup {
 	private static final String AREA_FILE = "VariableAccessAreaShpFile";
 	private static final String AREA_KEY = "VariableAccessAreaShpKey";
 	private static final String COORDS2TIME_SURCHARGE_FILE = "coords2TimeSurchargeFile";
+	private static final String MAX_DISTANCE_ONLY_TRANSIT_WALK_AVAILABLE = "maxDistanceOnlyTransitWalkAvailable";
 	private String style = "fixed";
 	private String mode = "pt";
-
+	private double maxDistanceOnlyTransitWalkAvailable = 0.;
 	private String transitScheduleFile = null;
 	private String variableAccessAreaShpFile = null;
 	private String variableAccessAreaShpKey = null;
@@ -162,6 +163,23 @@ public class VariableAccessConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(COORDS2TIME_SURCHARGE_FILE)
 	public void setCoords2TimeSurchargeFile(String coords2TimeSurchargeFile) {
 		this.coords2TimeSurchargeFile = coords2TimeSurchargeFile;
+	}
+	
+	/**
+	 * @param maxDistanceOnlyTransitWalkAvailable
+	 * 			the maxDistanceOnlyTransitWalkAvailable to set
+	 */
+	@StringSetter(MAX_DISTANCE_ONLY_TRANSIT_WALK_AVAILABLE)
+	public void setMaxDistanceOnlyTransitWalkAvailable(double maxDistanceOnlyTransitWalkAvailable) {
+		this.maxDistanceOnlyTransitWalkAvailable = maxDistanceOnlyTransitWalkAvailable;
+	}
+	
+	/**
+	 * @return the maxDistanceOnlyTransitWalkAvailable
+	 */
+	@StringGetter(MAX_DISTANCE_ONLY_TRANSIT_WALK_AVAILABLE)
+	public double getMaxDistanceOnlyTransitWalkAvailable() {
+		return maxDistanceOnlyTransitWalkAvailable;
 	}
 	
 	/**

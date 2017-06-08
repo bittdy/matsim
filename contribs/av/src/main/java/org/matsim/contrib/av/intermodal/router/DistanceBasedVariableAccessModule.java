@@ -26,7 +26,9 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Map.Entry;
@@ -43,6 +45,7 @@ import org.matsim.contrib.av.intermodal.router.config.VariableAccessConfigGroup;
 import org.matsim.core.config.Config;
 import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.network.NetworkUtils;
+import org.matsim.core.population.PersonUtils;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.routes.GenericRouteImpl;
 import org.matsim.core.utils.geometry.CoordUtils;
@@ -58,13 +61,14 @@ import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
 
 /**
- * @author  jbischoff
+ * TODO: checkCarAvail
+ * @author  jbischoff / vsp-gleich
  *
  */
 /**
  *
  */
-public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgressTravelDisutility {
+public class DistanceBasedVariableAccessModule implements VariableAccessEgressTravelDisutility {
 
 	
 	private Map<String,Boolean> teleportedModes = new HashMap<>();
@@ -76,6 +80,9 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 	/** choose randomly between no or full time surcharge to be applied */
 	private Map<Coord, Double> discouragedCoord2TimeSurchargeRandomOnOff = new HashMap<>();
 	private final Random rand = MatsimRandom.getRandom();
+	private final String variableAccessStyle;
+	private final double maxDistanceOnlyTransitWalkAvailable;
+	private boolean checkCarAvail = true;
 	
 	private final Network carnetwork;
 	private final Config config;
@@ -83,16 +90,21 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 	/**
 	 * 
 	 */
-	public FixedDistanceBasedVariableAccessModule(Network carnetwork, Config config) {
+	public DistanceBasedVariableAccessModule(Network carnetwork, Config config) {
 		this.config = config;
 		this.carnetwork = carnetwork;
 		VariableAccessConfigGroup vaconfig = (VariableAccessConfigGroup) config.getModules().get(VariableAccessConfigGroup.GROUPNAME);
-		if(vaconfig.getVariableAccessAreaShpFile() != null && vaconfig.getVariableAccessAreaShpKey() != null){
+		if (vaconfig.getVariableAccessAreaShpFile() != null && vaconfig.getVariableAccessAreaShpKey() != null) {
 			geometriesVariableAccessArea = readShapeFileAndExtractGeometry(vaconfig.getVariableAccessAreaShpFile(), vaconfig.getVariableAccessAreaShpKey());
 		}
-		if(vaconfig.getCoords2TimeSurchargeFile() != null){
+		if (vaconfig.getCoords2TimeSurchargeFile() != null) {
 			readCoord2SurchargeFile(vaconfig.getCoords2TimeSurchargeFile());
 		}
+		variableAccessStyle = vaconfig.getStyle();
+		if (!(variableAccessStyle.equals("fixed") || variableAccessStyle.equals("flexible"))) {
+			throw new RuntimeException("Unsupported Style");
+		}
+		maxDistanceOnlyTransitWalkAvailable = vaconfig.getMaxDistanceOnlyTransitWalkAvailable();
 		teleportedModes.put(TransportMode.transit_walk, true);
 	}
 	/**
@@ -105,6 +117,8 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 	public void registerMode(String mode, int maximumAccessDistance, boolean isTeleported){
 		if (this.distanceMode.containsKey(maximumAccessDistance)){
 			throw new RuntimeException("Maximum distance of "+maximumAccessDistance+" is already registered to mode "+distanceMode.get(maximumAccessDistance)+" and cannot be re-registered to mode: "+mode);
+		} else if (this.distanceMode.containsValue(mode)) {
+			throw new RuntimeException("mode "+mode+"is already registered. Check your config four double entries..");
 		}
 		if (isTeleported){
 			teleportedModes.put(mode, true);
@@ -139,7 +153,11 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 			}
 		}
 		if (isStartInVariableAccessArea && isEndInVariableAccessArea){
-			mode = getModeForDistance(egressDistance);
+			if (variableAccessStyle.equals("fixed")) {
+				mode = getModeForDistanceFixedStyle(egressDistance);				
+			} else {
+				mode = getModeForDistanceFlexibleStyle(egressDistance, person);		
+			}
 		}
 		Leg leg = PopulationUtils.createLeg(mode);
 		Link startLink = NetworkUtils.getNearestLink(carnetwork, coord);
@@ -170,7 +188,10 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 			leg.setTravelTime(travelTime);
 			route.setDistance(distance);
 			
-
+//			too expensive
+//			Path path = this.lcpPerNonTeleportedMode.get(mode).calcLeastCostPath(startLink.getFromNode(), endLink.getToNode(), 0, person, null);
+//			route.setDistance(path.travelCost);
+//			route.setTravelTime(path.travelTime);
 		}
 		return leg;
 	}
@@ -179,7 +200,7 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 	 * @param egressDistance
 	 * @return
 	 */
-	private String getModeForDistance(double egressDistance) {
+	private String getModeForDistanceFixedStyle(double egressDistance) {
 		for (Entry<Integer, String> e : this.distanceMode.entrySet()){
 			if (e.getKey()>=egressDistance){
 //				System.out.println("Mode" + e.getValue()+" "+egressDistance);
@@ -188,6 +209,45 @@ public class FixedDistanceBasedVariableAccessModule implements VariableAccessEgr
 		}
 		throw new RuntimeException(egressDistance + " m is not covered by any egress / access mode.");
 		
+	}
+	
+	/**
+	 * @param egressDistance
+	 * @return
+	 */
+	private String getModeForDistanceFlexibleStyle(double egressDistance, Person p) {
+		if (egressDistance <= maxDistanceOnlyTransitWalkAvailable) return TransportMode.transit_walk;
+		//TODO: MAke Config switch
+		List<String> possibleModes = new ArrayList<>();
+		for (Entry<Integer,String> e : this.distanceMode.entrySet()){
+			if (e.getKey()>=egressDistance){
+				if (e.getValue().equals(TransportMode.car)){
+					if ((checkCarAvail)&&(p!=null)&&(p.getCustomAttributes()!=null)){
+						
+						String carA  = PersonUtils.getCarAvail(p);
+						if (carA!=null){
+						if (carA.equals("always")||carA.equals("sometimes")){
+							possibleModes.add(e.getValue());
+						}
+						}
+						else {				
+							possibleModes.add(e.getValue());
+						}
+					}
+					else {
+						possibleModes.add(e.getValue());
+					}
+				}
+				else {
+					possibleModes.add(e.getValue());
+				}
+			}
+		}
+		if (possibleModes.size()<1){
+//			Logger.getLogger(getClass()).warn("Egress distance "+egressDistance+ " is not covered by any available mode mode for person "+p.getId()+". Assuming walk.");
+			return (TransportMode.transit_walk);
+		}
+		return possibleModes.get(rand.nextInt(possibleModes.size()));
 	}
 
 
