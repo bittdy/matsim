@@ -30,13 +30,7 @@ public class FilePaths {
 //	public final static String PATH_TRANSIT_VEHICLES_BERLIN__10PCT_45MPS = PATH_BASE_DIRECTORY + "data/input/Berlin10pct/mod/transitVehicles.10pct.45mps.xml";
 	/** 10pct Scenario Configs and corresponding input files */
 	public final static String PATH_CONFIG_BERLIN__10PCT_NULLFALL = "data/input/Berlin10pct/Nullfall/config.10pct.Nullfall.xml";
-	public final static String PATH_CONFIG_BERLIN__10PCT_TAXI = "data/input/Berlin10pct/Taxi/config.10pct.Taxi.xml";
-	public final static String PATH_CONFIG_BERLIN__10PCT_TAXI_KEEP_LAST_SELECTED_PLAN = "data/input/Berlin10pct/Taxi/config.10pct.Taxi_keepLastSelectedPlan.xml";
-	public final static String PATH_TAXI_VEHICLES_20_BERLIN__10PCT = "data/input/Berlin10pct/Taxi/taxiVehicles.10pct.Taxi_20.xml";
-	public final static String PATH_TAXI_VEHICLES_25_BERLIN__10PCT = "data/input/Berlin10pct/Taxi/taxiVehicles.10pct.Taxi_25.xml";
-	public final static String PATH_TAXI_VEHICLES_50_BERLIN__10PCT = "data/input/Berlin10pct/Taxi/taxiVehicles.10pct.Taxi_50.xml";
-	public final static String PATH_TAXI_VEHICLES_100_BERLIN__10PCT = "data/input/Berlin10pct/Taxi/taxiVehicles.10pct.Taxi_100.xml";
-	public final static String PATH_TAXI_VEHICLES_500_BERLIN__10PCT = "data/input/Berlin10pct/Taxi/taxiVehicles.10pct.Taxi_500.xml";
+	public final static String PATH_COORDS2TIME_SURCHARGE_FILE = "data/input/Berlin10pct/mod/surchargeTransitStops.txt";
 	
 	public final static String PATH_CONFIG_BERLIN__10PCT_DRT = "data/input/Berlin10pct/DRT/config.10pct.DRT.xml";
 	public final static String PATH_CONFIG_BERLIN__10PCT_DRT_KEEP_LAST_SELECTED_PLAN = "data/input/Berlin10pct/DRT/config.10pct.DRT_keepLastSelectedPlan.xml";

@@ -43,6 +43,7 @@ public class RunDRT {
 		vacfg.setVariableAccessAreaShpKey(FilePaths.AV_OPERATION_AREA_SHP_KEY);
 		vacfg.setStyle("flexible"); //FixedDistanceBasedVariableAccessModule
 		vacfg.setMaxDistanceOnlyTransitWalkAvailable(0);
+		vacfg.setCoords2TimeSurchargeFile(FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_COORDS2TIME_SURCHARGE_FILE);
 		{
 			VariableAccessModeConfigGroup drt = new VariableAccessModeConfigGroup();
 			drt.setDistance(20000);
