@@ -97,7 +97,7 @@ public class RunDRT {
 		Controler controler = DrtControlerCreator.createControler(config, false);
 		controler.addOverridingModule(new VariableAccessTransitRouterModule());
 		
-		controler.run();
+//		controler.run();
 		
 		EventsManager events = EventsUtils.createEventsManager();
 		Set<String> monitoredModes = new HashSet<>();
@@ -125,7 +125,7 @@ public class RunDRT {
 		}
 		DrtPtTripEventHandler eventHandler = new DrtPtTripEventHandler(scenario.getNetwork(), monitoredModes, null);//linksInArea);
 		events.addHandler(eventHandler);
-		new MatsimEventsReader(events).readFile(config.controler().getOutputDirectory() + "/ITERS/it.0/0.events.xml.gz");
+		new MatsimEventsReader(events).readFile(config.controler().getOutputDirectory() + "/output_events.xml.gz");
 		System.out.println("Start writing trips of " + eventHandler.getPerson2ExperiencedTrips().size() + " agents.");
 		ExperiencedTripsWriter tripsWriter = new ExperiencedTripsWriter(outputDirectory + "/experiencedTrips.csv", 
 				eventHandler.getPerson2ExperiencedTrips(), monitoredModes);
