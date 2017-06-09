@@ -190,8 +190,12 @@ LinkEnterEventHandler, TeleportationArrivalEventHandler {
 			} else {
 				waitTime = 0.0;
 				inVehicleTime = event.getTime() - agent2CurrentLegStartTime.get(event.getPersonId());
-				distance = agent2CurrentTeleportDistance.containsKey(event.getPersonId()) ? 
-						agent2CurrentTeleportDistance.get(event.getPersonId()) : null;
+				if (agent2CurrentTeleportDistance.containsKey(event.getPersonId())) {
+					distance = agent2CurrentTeleportDistance.get(event.getPersonId());
+				} else {
+					throw new RuntimeException("agent with PersonArrivalEvent but neither teleport distance nor" + 
+							" enter vehicle time" + event.getPersonId());
+				}
 			}
 			// Save ExperiencedLeg and remove temporary data
 			agent2CurrentTripExperiencedLegs.get(event.getPersonId()).add(new ExperiencedLeg(
