@@ -17,7 +17,8 @@
  *   See also COPYING, LICENSE and WARRANTY file                           *
  *                                                                         *
  * *********************************************************************** */
-package playground.benjamin.scenarios.manteuffel;
+
+package playground.agarwalamit.berlin.berlinBVG09;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -30,31 +31,22 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.vehicles.*;
-
+import playground.agarwalamit.utils.FileUtils;
+import playground.benjamin.scenarios.manteuffel.ManteuffelEmissionVehicleGenerator;
 
 /**
- * @author benjamin
+ * @author benjamin (after {@link ManteuffelEmissionVehicleGenerator}
  *
  */
-public class ManteuffelEmissionVehicleGenerator {
-	private static final Logger logger = Logger.getLogger(ManteuffelEmissionVehicleGenerator.class);
-	
-//	private final String populationFile = "../../runs-svn/manteuffelstrasse/bau/bvg.run190.25pct.dilution001.network20150727.v2.static.output_plans.xml.gz";
-//	private final String netFile = "../../runs-svn/manteuffelstrasse/bau/bvg.run190.25pct.dilution001.network20150727.v2.static.output_network.xml.gz";
-//	private final String transitVehicleFile = "../../runs-svn/manteuffelstrasse/bau/bvg.run190.25pct.dilution001.network20150727.v2.static.output_transitVehicles.xml.gz";
-//	private final String transitScheduleFile = "../../runs-svn/manteuffelstrasse/bau/bvg.run190.25pct.dilution001.network20150727.v2.static.output_transitSchedule.xml.gz";
-//	private final String eventsFile = "../../runs-svn/manteuffelstrasse/bau/ITERS/it.30/bvg.run190.25pct.dilution001.network20150727.v2.static.30.events.xml.gz";
-//	
-//	private final String outputVehicleFile = "../../runs-svn/manteuffelstrasse/bau/bvg.run190.25pct.dilution001.network20150727.v2.static.emissionVehicles.xml.gz";
+public class BerlinEmissionVehicleFromPlans {
+	private static final Logger logger = Logger.getLogger(BerlinEmissionVehicleFromEvents.class);
 
-	private final String populationFile = "../../../runs-svn/berlin-an-time/input/population_1agent.xml";
-	private final String netFile = "../../../runs-svn/berlin-an-time/input/network_withRoadTypes.xml";
-	private final String transitVehicleFile = null;
-	private final String transitScheduleFile = null;
-	private final String eventsFile = null;
-	
-	private final String outputVehicleFile = "../../../runs-svn/berlin-an-time/input/population_1agent.emissionVehicle.xml.gz";
-	
+	private final String populationFile = FileUtils.RUNS_SVN+"/berlin-bvg09/bvg.run189.10pct/ITERS/it.100/bvg.run189.10pct.100.plans.filtered.selected.xml.gz";
+	private final String netFile = FileUtils.RUNS_SVN+"/berlin-bvg09/bvg.run189.10pct/emissionsRelatedFiles/rev554B-bvg00-0.1sample.network_withRoadTypes.xml";
+	private final String transitVehicleFile = FileUtils.SHARED_SVN+"/projects/bvg_3_bln_inputdata/rev554B-bvg00-0.1sample/network/transitVehicles.final.xml.gz";
+	private final String transitScheduleFile = FileUtils.SHARED_SVN+"/projects/bvg_3_bln_inputdata/rev554B-bvg00-0.1sample/network/transitSchedule.xml.gz";
+
+	private final String outputVehicleFile = FileUtils.RUNS_SVN+"/berlin-bvg09/bvg.run189.10pct/emissionsRelatedFiles/bvg.run189.10pct.100.emissionVehicle.xml.gz";
 
 	private void run() {
 		Config config = ConfigUtils.createConfig();
@@ -64,10 +56,11 @@ public class ManteuffelEmissionVehicleGenerator {
 		config.transit().setVehiclesFile(transitVehicleFile);
 		config.transit().setTransitScheduleFile(transitScheduleFile);
 		Scenario scenario = ScenarioUtils.loadScenario(config);
-		
+
+		logger.error("Transit vehicles are completely ignored.");
+
 		Vehicles outputVehicles = VehicleUtils.createVehiclesContainer();
-		
-		
+
 		for(Person person : scenario.getPopulation().getPersons().values()){
 			Id<Person> personId = person.getId();
 			Id<Vehicle> vehicleId = Id.create(personId, Vehicle.class); //TODO: this should be rather the vehicle, not the person; re-think EmissionModule!
@@ -117,9 +110,6 @@ public class ManteuffelEmissionVehicleGenerator {
 						vehicleAttributes.getHbefaSizeClass() + ";" + 
 						vehicleAttributes.getHbefaEmConcept(), VehicleType.class);
 				VehicleType vehicleType = VehicleUtils.getFactory().createVehicleType(vehTypeId);
-
-				// either set following or use switch in EmissionConfigGroup to use vehicle id for vehicle description. Amit sep 2016
-//				vehicleType.setDescription(vehTypeId.toString());
 				vehicleType.setDescription(EmissionSpecificationMarker.BEGIN_EMISSIONS+vehTypeId.toString()+EmissionSpecificationMarker.END_EMISSIONS);
 
 				if(!(outputVehicles.getVehicleTypes().containsKey(vehTypeId))){
@@ -133,73 +123,12 @@ public class ManteuffelEmissionVehicleGenerator {
 			}
 		}
 		
-		//===
-//		Map<Id<TransitLine>, TransitLine> transitLines = scenario.getTransitSchedule().getTransitLines();
-//		EventsManager eventsManager = EventsUtils.createEventsManager();
-//		EventsReaderXMLv1 reader = new EventsReaderXMLv1(eventsManager);
-//		eventsManager.addHandler(new ManteuffelLinkLeaveHandler(outputVehicles, transitLines));
-//		reader.readFile(eventsFile);
-		
-		//=== TODO: fix this?
-//		List<String> nonCondideredPersons = new ArrayList<>();
-//		nonCondideredPersons.add("pt_tr_35415_1000");
-//		nonCondideredPersons.add("pt_tr_35416_1000");
-//		nonCondideredPersons.add("pt_tr_35417_1000");
-//		nonCondideredPersons.add("pt_tr_35418_1000");
-//		
-//		nonCondideredPersons.add("pt_tr_35415r_1000");
-//		nonCondideredPersons.add("pt_tr_35416r_1000");
-//		nonCondideredPersons.add("pt_tr_35417r_1000");
-//		nonCondideredPersons.add("pt_tr_35418r_1000");
-//		
-//		for(String stringId : nonCondideredPersons){
-//			vehicleCategory = HbefaVehicleCategory.HEAVY_GOODS_VEHICLE;
-//			vehicleAttributes = new HbefaVehicleAttributes();
-//			Id<Vehicle> vehicleId = Id.create(stringId, Vehicle.class);
-//			Id<VehicleType> vehTypeId = Id.create(vehicleCategory + ";" + 
-//					vehicleAttributes.getHbefaTechnology() + ";" + 
-//					vehicleAttributes.getHbefaSizeClass() + ";" + 
-//					vehicleAttributes.getHbefaEmConcept(), VehicleType.class);
-//			VehicleType vehicleType = VehicleUtils.getFactory().createVehicleType(vehTypeId);
-//
-//			if(!(outputVehicles.getVehicleTypes().containsKey(vehTypeId))){
-//				outputVehicles.addVehicleType(vehicleType);
-//			} else {
-//				// do nothing
-//			}
-//			Vehicle vehicle = VehicleUtils.getFactory().createVehicle(vehicleId, vehicleType);
-//			outputVehicles.addVehicle(vehicle);
-//		}
-		
-//		for(Vehicle transveh : scenario.getTransitVehicles().getVehicles().values()){ // all transit vehicles are for now HDV; TODO: CHK!
-//			Id <Vehicle> transvehId = transveh.getId();
-//			
-//			vehicleCategory = HbefaVehicleCategory.HEAVY_GOODS_VEHICLE;
-//			vehicleAttributes = new HbefaVehicleAttributes();
-//			
-//			Id<VehicleType> vehTypeId = Id.create(vehicleCategory + ";" + 
-//									  vehicleAttributes.getHbefaTechnology() + ";" + 
-//									  vehicleAttributes.getHbefaSizeClass() + ";" + 
-//									  vehicleAttributes.getHbefaEmConcept(), VehicleType.class);
-//			VehicleType vehicleType = VehicleUtils.getFactory().createVehicleType(vehTypeId);
-//			
-//			if(!(outputVehicles.getVehicleTypes().containsKey(vehTypeId))){
-//				outputVehicles.addVehicleType(vehicleType);
-//			} else {
-//				// do nothing
-//			}
-//			
-//			Vehicle vehicle = VehicleUtils.getFactory().createVehicle(transvehId, vehicleType);
-//			outputVehicles.addVehicle( vehicle);
-//		}
-		
-		//===
 		VehicleWriterV1 vehicleWriter = new VehicleWriterV1(outputVehicles);
 		vehicleWriter.writeFile(outputVehicleFile);
 	}
 
 	public static void main(String[] args) {
-		ManteuffelEmissionVehicleGenerator evg = new ManteuffelEmissionVehicleGenerator();
+		BerlinEmissionVehicleFromPlans evg = new BerlinEmissionVehicleFromPlans();
 		evg.run();
 	}
 }
