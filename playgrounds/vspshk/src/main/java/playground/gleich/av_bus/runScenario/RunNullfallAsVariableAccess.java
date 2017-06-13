@@ -105,7 +105,7 @@ public class RunNullfallAsVariableAccess {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		DrtPtTripEventHandler eventHandler = new DrtPtTripEventHandler(scenario.getNetwork(), monitoredModes, null);//linksInArea);
+		DrtPtTripEventHandler eventHandler = new DrtPtTripEventHandler(scenario.getNetwork(), scenario.getTransitSchedule(), monitoredModes, null);//linksInArea);
 		events.addHandler(eventHandler);
 		new MatsimEventsReader(events).readFile(config.controler().getOutputDirectory() + "/output_events.xml.gz");
 		System.out.println("Start writing trips of " + eventHandler.getPerson2ExperiencedTrips().size() + " agents.");

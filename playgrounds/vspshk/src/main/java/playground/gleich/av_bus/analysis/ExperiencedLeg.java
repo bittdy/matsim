@@ -22,6 +22,8 @@ package playground.gleich.av_bus.analysis;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.pt.transitSchedule.api.TransitRoute;
+import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 
 // Coords unavailable in events
 /**
@@ -39,13 +41,20 @@ public class ExperiencedLeg {
 	
 	private final String mode;
 	private final double waitTime;
+	private final double grossWaitTime;
 	private final double inVehicleTime;
 	private final double distance;
+	private final Id<TransitStopFacility> ptFromStop;
+	private final Id<TransitStopFacility> ptToStop;
+	
+	private final Id<TransitRoute> transitRouteId;
 	
 	ExperiencedLeg(Id<Person> agent,
 //			Coord from, Coord to, 
 			Id<Link> fromLink, Id<Link> toLink, double startTime,
-			double endTime, String mode, double waitTime, double inVehicleTime, double distance) {
+			double endTime, String mode, double waitTime, double grossWaitTime, double inVehicleTime, 
+			double distance, Id<TransitRoute> transitRouteId,
+			Id<TransitStopFacility> ptFromStop, Id<TransitStopFacility> ptToStop) {
 		this.agent = agent;
 //		this.from = from;
 //		this.to = to;
@@ -55,8 +64,12 @@ public class ExperiencedLeg {
 		this.endTime = endTime;
 		this.mode = mode;
 		this.waitTime = waitTime;
+		this.grossWaitTime = grossWaitTime;
 		this.inVehicleTime = inVehicleTime;
 		this.distance = distance;
+		this.transitRouteId = transitRouteId;
+		this.ptFromStop = ptFromStop;
+		this.ptToStop = ptToStop;
 	}
 	
 	double getDistance() {
@@ -89,8 +102,22 @@ public class ExperiencedLeg {
 	double getWaitTime() {
 		return waitTime;
 	}
+	double getGrossWaitTime() {
+		return grossWaitTime;
+	}
 	double getInVehicleTime() {
 		return inVehicleTime;
+	}
+	Id<TransitRoute> getTransitRouteId() {
+		return transitRouteId;
+	}
+
+	Id<TransitStopFacility> getPtFromStop() {
+		return ptFromStop;
+	}
+
+	Id<TransitStopFacility> getPtToStop() {
+		return ptToStop;
 	}
 
 }

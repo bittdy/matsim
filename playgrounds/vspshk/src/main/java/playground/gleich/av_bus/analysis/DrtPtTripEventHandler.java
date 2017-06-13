@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.events.ActivityEndEvent;
 import org.matsim.api.core.v01.events.ActivityStartEvent;
 import org.matsim.api.core.v01.events.LinkEnterEvent;
@@ -42,27 +43,51 @@ import org.matsim.api.core.v01.events.handler.PersonEntersVehicleEventHandler;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.contrib.drt.passenger.events.DrtRequestRejectedEvent;
+import org.matsim.contrib.drt.passenger.events.DrtRequestRejectedEventHandler;
+import org.matsim.contrib.drt.passenger.events.DrtRequestSubmittedEvent;
+import org.matsim.contrib.drt.passenger.events.DrtRequestSubmittedEventHandler;
+import org.matsim.core.api.experimental.events.AgentWaitingForPtEvent;
 import org.matsim.core.api.experimental.events.TeleportationArrivalEvent;
+import org.matsim.core.api.experimental.events.handler.AgentWaitingForPtEventHandler;
 import org.matsim.core.api.experimental.events.handler.TeleportationArrivalEventHandler;
+import org.matsim.pt.transitSchedule.api.Departure;
+import org.matsim.pt.transitSchedule.api.TransitLine;
+import org.matsim.pt.transitSchedule.api.TransitRoute;
+import org.matsim.pt.transitSchedule.api.TransitSchedule;
+import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 import org.matsim.vehicles.Vehicle;
 
 // One trip is the sum of all legs and "pt interaction" activities between to real, non-"pt interaction", activities
 // Coords unavailable in events -> no coords written
 /**
+ * Please note: Looks up the TransitRoute using the vehicleId. If the same vehicle services multiple TransitRoutes,
+ * this program will always save the first TransitRoute found where this vehicle operates as the TransitRoute used
+ * for the leg, although the agent used another TransitRoute where the same vehicle operates, too.
+ * 
+ * Drt legs can start when the drt request is submitted. This can happen before or after the PersonDepartureEvent,
+ * that means a part of the wait time can take place before the agent has terminated its last activity (or 
+ * pt interaction) prior to departing for the drt leg. Therefore the wait time is split into gross wait time 
+ * (wait time between the drt request and the drt vehicle arrival) and (net) wait time (wait time between the
+ * departure event and the drt vehicle arrival).
+ * 
  * @author gleich
  *
  * @param network
  * @param monitoredModes : All trips to be monitored have to consist only of legs of these modes
  * @param monitoredStartAndEndLinks : only trips which start or end on one these links will be monitored.
  * Set to null if you want to have all trips from all origins and to all destinations.
+ * 
  */
 public class DrtPtTripEventHandler implements ActivityStartEventHandler, ActivityEndEventHandler,
 PersonDepartureEventHandler, PersonArrivalEventHandler, PersonEntersVehicleEventHandler, 
-LinkEnterEventHandler, TeleportationArrivalEventHandler {
+LinkEnterEventHandler, TeleportationArrivalEventHandler, AgentWaitingForPtEventHandler, 
+DrtRequestSubmittedEventHandler, DrtRequestRejectedEventHandler {
 	
 //	private Set<Id<Person>> agentsOnMonitoredTrip = new HashSet<>(); -> agent2CurrentTripStartLink.contains()
 //	private Map<Id<Person>, Boolean> agentHasDrtLeg = new HashMap<>();
 	private Network network;
+	private TransitSchedule ptSchedule;
 	
 	private Map<Id<Person>, List<ExperiencedTrip>> person2ExperiencedTrips = new HashMap<>();
 	
@@ -73,25 +98,32 @@ LinkEnterEventHandler, TeleportationArrivalEventHandler {
 	private Map<Id<Person>, List<ExperiencedLeg>> agent2CurrentTripExperiencedLegs = new HashMap<>();
 	
 //	private Map<Id<Person>, Coord> agent2CurrentLegStartCoord = new HashMap<>();
+	private Map<Id<Person>, String> agent2CurrentLegMode = new HashMap<>();
 	private Map<Id<Person>, Id<Link>> agent2CurrentLegStartLink = new HashMap<>();
 	private Map<Id<Person>, Double> agent2CurrentLegStartTime = new HashMap<>();
+	private Map<Id<Person>, Double> agent2CurrentLegDrtRequestTime = new HashMap<>();
+	private Map<Id<Person>, Id<TransitStopFacility>> agent2CurrentLegStartPtStop = new HashMap<>();
+	private Map<Id<Person>, Id<TransitStopFacility>> agent2CurrentLegEndPtStop = new HashMap<>();
 	private Map<Id<Person>, Double> agent2CurrentLegEnterVehicleTime = new HashMap<>();
 	private Map<Id<Person>, Double> agent2CurrentLegDistanceOffsetAtEnteringVehicle = new HashMap<>();
 	private Map<Id<Person>, Id<Vehicle>> agent2CurrentLegVehicle = new HashMap<>();
 	private Map<Id<Person>, Double> agent2CurrentTeleportDistance = new HashMap<>();
 	
 	private Map<Id<Vehicle>, Double> monitoredVeh2toMonitoredDistance = new HashMap<>();
+	private Map<Id<Vehicle>, Id<TransitRoute>> monitoredVeh2toTransitRoute = new HashMap<>();
 	private Set<String> monitoredModes = new HashSet<>();
 	private Set<Id<Link>> monitoredStartAndEndLinks = new HashSet<>(); // set to null if all links are to be monitored
 	
 	/**
 	 * 
 	 * @param network
-	 * @param monitoredModes: All trips to be monitored have to consist only of legs of these modes
-	 * @param monitoredStartAndEndLinks: only trips which start or end on one these links will be monitored. Set to null if you want to have all trips from all origins and to all destinations
+	 * @param monitoredModes : All trips to be monitored have to consist only of legs of these modes
+	 * @param monitoredStartAndEndLinks : only trips which start or end on one these links will be monitored. 
+	 * Set to null if you want to have all trips from all origins and to all destinations
 	 */
-	public DrtPtTripEventHandler(Network network, Set<String> monitoredModes, Set<Id<Link>> monitoredStartAndEndLinks){
+	public DrtPtTripEventHandler(Network network, TransitSchedule ptSchedule, Set<String> monitoredModes, Set<Id<Link>> monitoredStartAndEndLinks){
 		this.network = network;
+		this.ptSchedule = ptSchedule;
 		this.monitoredModes = monitoredModes; // pt, transit_walk, drt: walk eigentlich nicht, aber in FixedDistanceBased falsch als walk statt transit_walk gesetzt
 		this.monitoredStartAndEndLinks = monitoredStartAndEndLinks;
 	}
@@ -122,6 +154,12 @@ LinkEnterEventHandler, TeleportationArrivalEventHandler {
 		}
 	}
 	
+	// Detect start of wait time for drt (before a drt leg)
+	@Override
+	public void handleEvent(DrtRequestSubmittedEvent event) {
+		agent2CurrentLegDrtRequestTime.put(event.getPersonId(), event.getTime());
+	}
+	
 	// Detect start of a leg (and possibly the start of a trip)
 	@Override
 	public void handleEvent(PersonDepartureEvent event) {
@@ -134,23 +172,45 @@ LinkEnterEventHandler, TeleportationArrivalEventHandler {
 		if(!monitoredModes.contains(event.getLegMode())) {
 			return;
 		} else {
-			if(!agent2CurrentTripStartLink.containsKey(event.getPersonId())) {
-				agent2CurrentTripStartLink.put(event.getPersonId(), event.getLinkId());
-				agent2CurrentTripStartTime.put(event.getPersonId(), event.getTime());
-				agent2CurrentTripExperiencedLegs.put(event.getPersonId(), new ArrayList<>());
+			if (agent2CurrentLegStartLink.containsKey(event.getPersonId())) {
+				throw new RuntimeException("agent " + event.getPersonId() + " has PersonDepartureEvent at time " +
+						event.getTime() + " although the previous leg is not finished yet.");
+			} else {				
+				if (!agent2CurrentTripStartLink.containsKey(event.getPersonId())) {
+					agent2CurrentTripStartLink.put(event.getPersonId(), event.getLinkId());
+					agent2CurrentTripStartTime.put(event.getPersonId(), event.getTime());
+					agent2CurrentTripExperiencedLegs.put(event.getPersonId(), new ArrayList<>());
+				}
+				agent2CurrentLegStartLink.put(event.getPersonId(), event.getLinkId());	
+				agent2CurrentLegStartTime.put(event.getPersonId(), event.getTime());
+				agent2CurrentLegMode.put(event.getPersonId(), event.getLegMode());
 			}
-			agent2CurrentLegStartLink.put(event.getPersonId(), event.getLinkId());
-			agent2CurrentLegStartTime.put(event.getPersonId(), event.getTime());
 		}
+	}
+	
+	// Get the from and to TransitStops for pt legs
+	@Override
+	public void handleEvent(AgentWaitingForPtEvent event) {
+		if(agent2CurrentLegMode.get(event.getPersonId()).equals(TransportMode.pt)) {
+			agent2CurrentLegStartPtStop.put(event.getPersonId(), event.getWaitingAtStopId());
+			agent2CurrentLegEndPtStop.put(event.getPersonId(), event.getDestinationStopId());
+		} else {
+			throw new RuntimeException("AgentWaitingForPtEvent although current leg mode is not pt for agent " + 
+					event.getPersonId() + " at time " + event.getTime());
+		}
+				
 	}
 	
 	// Detect end of wait time and begin of in-vehicle time, monitor used vehicle to count in-vehicle distance
 	@Override
 	public void handleEvent(PersonEntersVehicleEvent event) {
-		if(agent2CurrentTripStartLink.containsKey(event.getPersonId())){			
+		if (agent2CurrentTripStartLink.containsKey(event.getPersonId())) {			
 			agent2CurrentLegVehicle.put(event.getPersonId(), event.getVehicleId());
 			agent2CurrentLegEnterVehicleTime.put(event.getPersonId(), event.getTime());
-			if(monitoredVeh2toMonitoredDistance.containsKey(event.getVehicleId())) {
+			if (agent2CurrentLegMode.get(event.getPersonId()).equals(TransportMode.pt)) {
+				searchTransitRouteOfVehicle(event);
+			}
+			if (monitoredVeh2toMonitoredDistance.containsKey(event.getVehicleId())) {
 				agent2CurrentLegDistanceOffsetAtEnteringVehicle.put(event.getPersonId(), 
 						monitoredVeh2toMonitoredDistance.get(event.getVehicleId()));
 			} else {
@@ -162,11 +222,26 @@ LinkEnterEventHandler, TeleportationArrivalEventHandler {
 			return;
 		}
 	}
+
+	private void searchTransitRouteOfVehicle(PersonEntersVehicleEvent event) {
+		if (monitoredVeh2toTransitRoute.containsKey(event.getVehicleId())) {					
+			for (TransitLine line : ptSchedule.getTransitLines().values()) {
+				for (TransitRoute route : line.getRoutes().values()) {
+					for (Departure departure: route.getDepartures().values()) {
+						if (departure.getVehicleId().equals(event.getVehicleId())) {
+							monitoredVeh2toTransitRoute.put(event.getVehicleId(), route.getId());
+							return;
+						}
+					}
+				}
+			}
+		}
+	}
 	
 	// teleport walk distances
 	@Override
 	public void handleEvent(TeleportationArrivalEvent event) {
-		if(agent2CurrentTripStartLink.containsKey(event.getPersonId())){
+		if(agent2CurrentTripStartLink.containsKey(event.getPersonId())) {
 			// the event should(?!) give the total distance walked -> agent2CurrentTeleportDistance should not contain the agent yet
 			agent2CurrentTeleportDistance.put(event.getPersonId(), event.getDistance());
 		}
@@ -175,39 +250,64 @@ LinkEnterEventHandler, TeleportationArrivalEventHandler {
 	// Detect end of a leg
 	@Override
 	public void handleEvent(PersonArrivalEvent event) {
-		if(agent2CurrentTripStartLink.containsKey(event.getPersonId())){
-			double waitTime;
-			double inVehicleTime;
-			double distance;
-			// e.g. pt leg
-			if(agent2CurrentLegEnterVehicleTime.containsKey(event.getPersonId())) {
-				waitTime = agent2CurrentLegEnterVehicleTime.get(event.getPersonId()) -
-						agent2CurrentLegStartTime.get(event.getPersonId());
-				inVehicleTime = event.getTime() - agent2CurrentLegEnterVehicleTime.get(event.getPersonId());
-				distance = monitoredVeh2toMonitoredDistance.get(agent2CurrentLegVehicle.get(event.getPersonId())) - 
-						agent2CurrentLegDistanceOffsetAtEnteringVehicle.get(event.getPersonId());
-			// e.g. walk leg
-			} else {
-				waitTime = 0.0;
-				inVehicleTime = event.getTime() - agent2CurrentLegStartTime.get(event.getPersonId());
-				if (agent2CurrentTeleportDistance.containsKey(event.getPersonId())) {
-					distance = agent2CurrentTeleportDistance.get(event.getPersonId());
+		if (agent2CurrentTripStartLink.containsKey(event.getPersonId())) {
+			if (agent2CurrentLegMode.get(event.getPersonId()).equals(event.getLegMode())) {				
+				double waitTime;
+				double grossWaitTime;
+				double inVehicleTime;
+				double distance;
+				Id<TransitRoute> ptRoute;
+				// e.g. pt leg
+				if (agent2CurrentLegEnterVehicleTime.containsKey(event.getPersonId())) {
+					inVehicleTime = event.getTime() - agent2CurrentLegEnterVehicleTime.get(event.getPersonId());
+					distance = monitoredVeh2toMonitoredDistance.get(agent2CurrentLegVehicle.get(event.getPersonId())) - 
+							agent2CurrentLegDistanceOffsetAtEnteringVehicle.get(event.getPersonId());
+					waitTime = agent2CurrentLegEnterVehicleTime.get(event.getPersonId()) -
+							agent2CurrentLegStartTime.get(event.getPersonId());
+					if (event.getLegMode().equals("drt")) {
+						grossWaitTime = agent2CurrentLegEnterVehicleTime.get(event.getPersonId()) -
+								agent2CurrentLegDrtRequestTime.get(event.getPersonId());
+						agent2CurrentLegDrtRequestTime.remove(event.getPersonId());
+					} else {
+						grossWaitTime = waitTime;
+					}
+					// e.g. walk leg
 				} else {
-					throw new RuntimeException("agent with PersonArrivalEvent but neither teleport distance nor" + 
-							" enter vehicle time" + event.getPersonId());
+					waitTime = 0.0;
+					grossWaitTime = 0.0;
+					inVehicleTime = event.getTime() - agent2CurrentLegStartTime.get(event.getPersonId());
+					if (agent2CurrentTeleportDistance.containsKey(event.getPersonId())) {
+						distance = agent2CurrentTeleportDistance.get(event.getPersonId());
+					} else {
+						throw new RuntimeException("agent with PersonArrivalEvent but neither teleport distance nor" + 
+								" enter vehicle time" + event.getPersonId());
+					}
 				}
+				if (event.getLegMode().equals(TransportMode.pt)) {
+					ptRoute = monitoredVeh2toTransitRoute.get(agent2CurrentLegVehicle.get(event.getPersonId()));
+				} else {
+					ptRoute = Id.create("no pt", TransitRoute.class);
+				}
+				// Save ExperiencedLeg and remove temporary data
+				agent2CurrentTripExperiencedLegs.get(event.getPersonId()).add(new ExperiencedLeg(
+						event.getPersonId(), agent2CurrentLegStartLink.get(event.getPersonId()), 
+						event.getLinkId(), (double) agent2CurrentLegStartTime.get(event.getPersonId()), 
+						event.getTime(), event.getLegMode(), waitTime, grossWaitTime, inVehicleTime, distance, ptRoute, 
+						agent2CurrentLegStartPtStop.get(event.getPersonId()), 
+						agent2CurrentLegEndPtStop.get(event.getPersonId())));
+				agent2CurrentLegMode.remove(event.getPersonId());
+				agent2CurrentLegStartLink.remove(event.getPersonId());
+				agent2CurrentLegStartTime.remove(event.getPersonId());
+				agent2CurrentLegStartPtStop.remove(event.getPersonId());
+				agent2CurrentLegEndPtStop.remove(event.getPersonId());
+				agent2CurrentLegEnterVehicleTime.remove(event.getPersonId());
+				agent2CurrentLegDistanceOffsetAtEnteringVehicle.remove(event.getPersonId());
+				agent2CurrentLegVehicle.remove(event.getPersonId());
+				agent2CurrentTeleportDistance.remove(event.getPersonId());
+			} else {
+				throw new RuntimeException("leg mode at PersonArrivalEvent different from leg mode saved at last " + 
+						"PersonDepartureEvent for agent " + event.getPersonId() + " at time " + event.getTime());
 			}
-			// Save ExperiencedLeg and remove temporary data
-			agent2CurrentTripExperiencedLegs.get(event.getPersonId()).add(new ExperiencedLeg(
-					event.getPersonId(), agent2CurrentLegStartLink.get(event.getPersonId()), 
-					event.getLinkId(), (double) agent2CurrentLegStartTime.get(event.getPersonId()), 
-					event.getTime(), event.getLegMode(), waitTime, inVehicleTime, distance));
-			agent2CurrentLegStartLink.remove(event.getPersonId());
-			agent2CurrentLegStartTime.remove(event.getPersonId());
-			agent2CurrentLegEnterVehicleTime.remove(event.getPersonId());
-			agent2CurrentLegDistanceOffsetAtEnteringVehicle.remove(event.getPersonId());
-			agent2CurrentLegVehicle.remove(event.getPersonId());
-			agent2CurrentTeleportDistance.remove(event.getPersonId());
 		}	
 	}
 //Test
@@ -259,5 +359,29 @@ LinkEnterEventHandler, TeleportationArrivalEventHandler {
 	public Set<Id<Link>> getMonitoredStartAndEndLinks() {
 		return monitoredStartAndEndLinks;
 	}
+
+	@Override
+	public void handleEvent(DrtRequestRejectedEvent event) {
+		// Save ExperiencedLeg and remove temporary data
+//		agent2CurrentTripExperiencedLegs.get(event.getPersonId()).add(new ExperiencedLeg(
+//				event.getPersonId(), agent2CurrentLegStartLink.get(event.getPersonId()), 
+//				event.getLinkId(), (double) agent2CurrentLegStartTime.get(event.getPersonId()), 
+//				event.getTime(), event.getLegMode(), waitTime, grossWaitTime, inVehicleTime, distance, ptRoute, 
+//				agent2CurrentLegStartPtStop.get(event.getPersonId()), 
+//				agent2CurrentLegEndPtStop.get(event.getPersonId())));
+//		agent2CurrentLegMode.remove(event.getPersonId());
+//		agent2CurrentLegStartLink.remove(event.getPersonId());
+//		agent2CurrentLegStartTime.remove(event.getPersonId());
+//		agent2CurrentLegStartPtStop.remove(event.getPersonId());
+//		agent2CurrentLegEndPtStop.remove(event.getPersonId());
+//		agent2CurrentLegEnterVehicleTime.remove(event.getPersonId());
+//		agent2CurrentLegDistanceOffsetAtEnteringVehicle.remove(event.getPersonId());
+//		agent2CurrentLegVehicle.remove(event.getPersonId());
+//		agent2CurrentTeleportDistance.remove(event.getPersonId());
+	}
+
+
+
+
 
 }
