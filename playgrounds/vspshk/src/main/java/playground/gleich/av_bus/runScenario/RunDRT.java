@@ -30,6 +30,7 @@ import org.matsim.core.events.MatsimEventsReader;
 import org.matsim.core.scenario.ScenarioUtils;
 
 import playground.gleich.av_bus.FilePaths;
+import playground.gleich.av_bus.analysis.DrtEventsReader;
 import playground.gleich.av_bus.analysis.DrtPtTripEventHandler;
 import playground.gleich.av_bus.analysis.ExperiencedTripsWriter;
 
@@ -39,7 +40,7 @@ public class RunDRT {
 		Config config = ConfigUtils.loadConfig(FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_CONFIG_BERLIN__10PCT_DRT,
 				new DrtConfigGroup(), new DvrpConfigGroup());
 		VariableAccessConfigGroup vacfg = new VariableAccessConfigGroup();
-		vacfg.setVariableAccessAreaShpFile(FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_AV_OPERATION_AREA_SIMPLIFIED_SHP);
+		vacfg.setVariableAccessAreaShpFile(FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_AV_OPERATION_AREA_SHP);
 		vacfg.setVariableAccessAreaShpKey(FilePaths.AV_OPERATION_AREA_SHP_KEY);
 		vacfg.setStyle("flexible"); //FixedDistanceBasedVariableAccessModule
 		vacfg.setMaxDistanceOnlyTransitWalkAvailable(0);
@@ -125,7 +126,7 @@ public class RunDRT {
 		}
 		DrtPtTripEventHandler eventHandler = new DrtPtTripEventHandler(scenario.getNetwork(), scenario.getTransitSchedule(), monitoredModes, null);//linksInArea);
 		events.addHandler(eventHandler);
-		new MatsimEventsReader(events).readFile(config.controler().getOutputDirectory() + "/output_events.xml.gz");
+		new DrtEventsReader(events).readFile(config.controler().getOutputDirectory() + "/output_events.xml.gz");
 		System.out.println("Start writing trips of " + eventHandler.getPerson2ExperiencedTrips().size() + " agents.");
 		ExperiencedTripsWriter tripsWriter = new ExperiencedTripsWriter(outputDirectory + "/experiencedTrips.csv", 
 				eventHandler.getPerson2ExperiencedTrips(), monitoredModes);
