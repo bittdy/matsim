@@ -21,19 +21,25 @@ package playground.gleich.av_bus.analysis;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.utils.io.IOUtils;
+import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 
 public class ExperiencedTripsWriter {
 	private String path;
 	private Map<Id<Person>, List<ExperiencedTrip>> agent2trips;
 	private Set<String> monitoredModes;
-	private String sep = ",";
+	// first level separator
+	private String sep = ";";
+	// second level separator
+	private String sep2 = ",";
 	private BufferedWriter bw;
 	
 	public ExperiencedTripsWriter(String path, Map<Id<Person>, List<ExperiencedTrip>> agent2trips, 
@@ -54,7 +60,8 @@ public class ExperiencedTripsWriter {
 		// write header
 		bw.write("tripId" + sep + "agent" + sep + "tripNumber" + sep + "activityBefore" + sep +
 				"activityAfter" + sep + "fromLinkId" + sep + "toLinkId" + sep +
-				"startTime" + sep + "endTime" + sep + "totalTravelTime" + sep + "numberOfLegs");
+				"startTime" + sep + "endTime" + sep + "totalTravelTime" + sep + 
+				"numberOfLegs" + sep + "transitStopsVisited");
 		for(String mode: monitoredModes){
 			bw.write(sep + mode + ".InVehicleTime");
 			bw.write(sep + mode + ".Distance");
@@ -67,18 +74,52 @@ public class ExperiencedTripsWriter {
 		bw.write(sep + "Other" + ".WaitTime");
 		bw.write(sep + "Other" + ".maxPerLegWaitTime");
 		bw.write(sep + "Other" + ".NumberOfLegs");
-		bw.newLine();
+		
 	}
 	
-	public void writeExperiencedTrips(){
-		for(List<ExperiencedTrip> tripList: agent2trips.values()){
-			for(ExperiencedTrip trip: tripList){
-				writeExperiencedTrip(trip);
+	public void writeExperiencedTrips() {
+		try {
+			bw.newLine();
+			for(List<ExperiencedTrip> tripList: agent2trips.values()){
+				for(ExperiencedTrip trip: tripList){
+					writeExperiencedTrip(trip);
+					bw.newLine();
+				}
 			}
+			bw.close();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+			throw new RuntimeException("could not write");
+		}
+	}
+	
+	public void writeExperiencedLegs() {
+		try {
+			// add header for leg
+			bw.write(sep + "legNr" + "legFromLinkId" + sep + "legToLinkId" + sep +
+					"legStartTime" + sep + "legEndTime" + sep +
+					"legMode" + sep + "legWaitTime" + sep + "legGrossWaitTime" + sep +
+					"legInVehicleTime" + sep + "legDistance" + sep + "legTransitRouteId" + sep +
+					"legPtFromStop" + sep + "legPtToStop");
+			bw.newLine();
+			for(List<ExperiencedTrip> tripList: agent2trips.values()){
+				for(ExperiencedTrip trip: tripList){
+					for(int i = 0; i < trip.getLegs().size(); i++) {
+						ExperiencedLeg leg = trip.getLegs().get(i);
+						writeExperiencedTrip(trip);
+						writeExperiencedLeg(leg, i);
+						bw.newLine();
+					}
+				}
+			}
+			bw.close();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+			throw new RuntimeException("could not write");
 		}
 	}
 
-	void writeExperiencedTrip(ExperiencedTrip trip) {
+	private void writeExperiencedTrip(ExperiencedTrip trip) {
 		try {
 			bw.write(trip.getId() + sep + trip.getAgent() + sep + trip.getTripNumber() + sep +
 					trip.getActivityBefore() + sep + trip.getActivityAfter() + sep + 
@@ -86,7 +127,16 @@ public class ExperiencedTripsWriter {
 					convertSecondsToTimeString(trip.getStartTime()) + sep + 
 					convertSecondsToTimeString(trip.getEndTime()) + sep + 
 					trip.getTotalTravelTime() + sep + trip.getLegs().size());
-			for(String mode: monitoredModes){
+			if (trip.getTransitStopsVisited().size() < 1) {
+				bw.write(sep + "no pt");
+			} else {
+				Iterator<Id<TransitStopFacility>> stopIterator = trip.getTransitStopsVisited().iterator();
+				bw.write(sep + stopIterator.next());
+				while (stopIterator.hasNext()) {
+					bw.write(sep2 + stopIterator.next());
+				}
+			}
+			for (String mode: monitoredModes){
 				try{
 					bw.write(sep + trip.getMode2inVehicleOrMoveTime().get(mode) + sep + 
 							trip.getMode2inVehicleOrMoveDistance().get(mode) + sep +
@@ -104,7 +154,24 @@ public class ExperiencedTripsWriter {
 					trip.getMode2waitTime().get("Other") + sep +
 					trip.getMode2maxPerLegWaitTime().get("Other") + sep +
 					trip.getMode2numberOfLegs().get("Other"));
-			bw.newLine();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+			throw new RuntimeException("could not write");
+		}
+	}
+	
+	private void writeExperiencedLeg(ExperiencedLeg leg, int legNr) {
+		try {
+			bw.write(sep + Integer.toString(legNr+1) + sep + leg.getFromLinkId() + sep + leg.getToLinkId() + sep + 
+					convertSecondsToTimeString(leg.getStartTime()) + sep + 
+					convertSecondsToTimeString(leg.getEndTime()) + sep + 
+					leg.getMode() + sep + leg.getWaitTime() + sep + leg.getGrossWaitTime() + sep +
+					leg.getInVehicleTime() + sep + leg.getDistance() + sep + leg.getTransitRouteId().toString());
+			if (leg.getMode().equals(TransportMode.pt)) {
+				bw.write( sep + leg.getPtFromStop().toString() + sep + leg.getPtToStop().toString());
+			} else {
+				bw.write( sep + "no pt" + sep + "no pt");
+			}
 		} catch (IOException e1) {
 			e1.printStackTrace();
 			throw new RuntimeException("could not write");
@@ -114,14 +181,5 @@ public class ExperiencedTripsWriter {
 	public static String convertSecondsToTimeString(double seconds) {
 		int s = (int) seconds;
 		return String.format("%d:%02d:%02d", s / 3600, (s % 3600) / 60, (s % 60));
-	}
-
-	public void closeWriter() {
-		try {
-			bw.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException("could not close writer");
-		}
 	}
 }

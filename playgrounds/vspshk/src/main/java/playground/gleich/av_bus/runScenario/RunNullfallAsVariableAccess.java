@@ -112,7 +112,6 @@ public class RunNullfallAsVariableAccess {
 		ExperiencedTripsWriter tripsWriter = new ExperiencedTripsWriter(outputDirectory + "/experiencedTrips.csv", 
 				eventHandler.getPerson2ExperiencedTrips(), monitoredModes);
 		tripsWriter.writeExperiencedTrips();
-		tripsWriter.closeWriter();
 	}
 
 }

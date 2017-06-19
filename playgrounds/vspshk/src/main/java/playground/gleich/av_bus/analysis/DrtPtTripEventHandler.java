@@ -224,7 +224,7 @@ DrtRequestSubmittedEventHandler, DrtRequestRejectedEventHandler {
 	}
 
 	private void searchTransitRouteOfVehicle(PersonEntersVehicleEvent event) {
-		if (monitoredVeh2toTransitRoute.containsKey(event.getVehicleId())) {					
+		if (!monitoredVeh2toTransitRoute.containsKey(event.getVehicleId())) {					
 			for (TransitLine line : ptSchedule.getTransitLines().values()) {
 				for (TransitRoute route : line.getRoutes().values()) {
 					for (Departure departure: route.getDepartures().values()) {

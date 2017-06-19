@@ -131,7 +131,9 @@ public class RunDRT {
 		ExperiencedTripsWriter tripsWriter = new ExperiencedTripsWriter(outputDirectory + "/experiencedTrips.csv", 
 				eventHandler.getPerson2ExperiencedTrips(), monitoredModes);
 		tripsWriter.writeExperiencedTrips();
-		tripsWriter.closeWriter();
+		ExperiencedTripsWriter legsWriter = new ExperiencedTripsWriter(outputDirectory + "/experiencedLegs.csv", 
+				eventHandler.getPerson2ExperiencedTrips(), monitoredModes);
+		legsWriter.writeExperiencedLegs();
 	}
 
 }

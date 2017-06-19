@@ -20,13 +20,16 @@
 package playground.gleich.av_bus.analysis;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 
 /**
  * @author gleich
@@ -45,6 +48,8 @@ public class ExperiencedTrip {
 	private final int tripNumber;
 	private final Id<ExperiencedTrip> id;
 	private final List<ExperiencedLeg> legs;
+	
+	private LinkedList<Id<TransitStopFacility>> transitStopsVisited = new LinkedList<>();
 	
 	private Map<String, Double> mode2inVehicleTime = new HashMap<>();
 	private Map<String, Double> mode2distance = new HashMap<>();
@@ -83,6 +88,25 @@ public class ExperiencedTrip {
 		this.id = Id.create(agent + "_trip" + tripNumber + "_from_" + fromLinkId + "_to_" + toLinkId, 
 				ExperiencedTrip.class);
 		calcSumsOverAllLegs(monitoredModes);
+		findTransitStopsVisited();
+	}
+
+	private void findTransitStopsVisited() {
+		for (ExperiencedLeg leg: legs){
+			if (leg.getMode().equals(TransportMode.pt)) {
+				/* Transfer stops are visited by the pt leg ending there and the following pt leg
+				 * but save the TransitStop only once.
+				 */
+				if (transitStopsVisited.isEmpty()) {
+					transitStopsVisited.add(leg.getPtFromStop());
+				} else if (transitStopsVisited.getLast().equals(leg.getFromLinkId())) {
+					// do not add twice
+				} else {
+					transitStopsVisited.add(leg.getPtFromStop());
+				}
+				transitStopsVisited.add(leg.getPtToStop());
+			}
+		}
 	}
 
 	private void calcSumsOverAllLegs(Set<String> monitoredModes){
@@ -182,5 +206,9 @@ public class ExperiencedTrip {
 
 	List<ExperiencedLeg> getLegs() {
 		return legs;
+	}
+
+	public LinkedList<Id<TransitStopFacility>> getTransitStopsVisited() {
+		return transitStopsVisited;
 	}
 }
