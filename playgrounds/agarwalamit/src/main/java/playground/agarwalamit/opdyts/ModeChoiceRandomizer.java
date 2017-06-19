@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 import floetteroed.opdyts.DecisionVariableRandomizer;
+import opdytsintegration.utils.OpdytsConfigGroup;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
@@ -111,7 +112,8 @@ public final class ModeChoiceRandomizer implements DecisionVariableRandomizer<Mo
                     List<PlanCalcScoreConfigGroup> tempCombinations = new ArrayList<>();
                     allCombinations.parallelStream().forEach(e -> {
                         PlanCalcScoreConfigGroup planCalcScoreConfigGroup = new PlanCalcScoreConfigGroup();
-                        for ( PlanCalcScoreConfigGroup.ModeParams modeParams : e.getScoringParameters(this.subPopName).getModes().values()) {
+                        for ( String newMode : this.considerdModes) {
+                            PlanCalcScoreConfigGroup.ModeParams modeParams = e.getScoringParameters(this.subPopName).getModes().get(newMode);
                             planCalcScoreConfigGroup.getScoringParametersPerSubpopulation().get(this.subPopName).addModeParams(copyOfModeParam(modeParams) );
                         }
                         tempCombinations.add(planCalcScoreConfigGroup);
