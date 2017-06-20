@@ -244,10 +244,10 @@ public class VariableAccessTransitRouterImpl implements TransitRouter {
 									time += leg.getTravelTime();
 									
 									Route walkRoute = new GenericRouteImpl(leg.getRoute().getEndLinkId(), egressStop.getLinkId());
-									double walkTime = getTransferTime(person, network.getLinks().get(leg.getRoute().getEndLinkId()).getCoord(), egressStop.getCoord());
+									double walkTime = getTransferTime(person, network.getLinks().get(leg.getRoute().getEndLinkId()).getToNode().getCoord(), egressStop.getCoord());
 									walkRoute.setTravelTime(walkTime);
 									walkRoute.setDistance(config.getBeelineDistanceFactor() * 
-											NetworkUtils.getEuclideanDistance(network.getLinks().get(leg.getRoute().getEndLinkId()).getCoord(), egressStop.getCoord()) );
+											NetworkUtils.getEuclideanDistance(network.getLinks().get(leg.getRoute().getEndLinkId()).getToNode().getCoord(), egressStop.getCoord()) );
 								
 									Leg walkleg = PopulationUtils.createLeg(TransportMode.transit_walk);
 									walkleg.setTravelTime(walkTime);
@@ -307,11 +307,11 @@ public class VariableAccessTransitRouterImpl implements TransitRouter {
 				}
 				else {
 					leg = PopulationUtils.createLeg(TransportMode.transit_walk);
-					double walkTime = getTransferTime(person, accessStop.getCoord(), network.getLinks().get(eleg.getRoute().getStartLinkId()).getCoord());
+					double walkTime = getTransferTime(person, accessStop.getCoord(), network.getLinks().get(eleg.getRoute().getStartLinkId()).getToNode().getCoord());
 					leg.setTravelTime(walkTime);
 					Route walkRoute = new GenericRouteImpl(accessStop.getLinkId(), eleg.getRoute().getStartLinkId());
 					walkRoute.setDistance(config.getBeelineDistanceFactor() * 
-											NetworkUtils.getEuclideanDistance(accessStop.getCoord(),network.getLinks().get(eleg.getRoute().getStartLinkId()).getCoord()));
+											NetworkUtils.getEuclideanDistance(accessStop.getCoord(),network.getLinks().get(eleg.getRoute().getStartLinkId()).getToNode().getCoord()));
 					leg.setRoute(walkRoute);
 					legs.add(leg);
 					legs.add(eleg);
