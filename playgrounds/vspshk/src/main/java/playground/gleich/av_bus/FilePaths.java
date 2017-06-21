@@ -10,6 +10,7 @@ public class FilePaths {
 	
 	/** 10pct Scenario Unmodified */
 	public final static String PATH_NETWORK_BERLIN__10PCT = "data/input/Berlin10pct/network.final10pct.xml.gz";
+	public final static String PATH_NETWORK_CHANGE_EVENTS_BERLIN__10PCT = "data/input/Berlin10pct/changeevents10.xml.gz";
 	public final static String PATH_POPULATION_BERLIN__10PCT_UNFILTERED = "data/input/Berlin10pct/population.10pct.unfiltered.base.xml.gz";
 	public final static String PATH_TRANSIT_SCHEDULE_BERLIN__10PCT = "data/input/Berlin10pct/transitSchedule.xml.gz";
 	public final static String PATH_TRANSIT_VEHICLES_BERLIN__10PCT = "data/input/Berlin10pct/transitVehicles.final.xml";
@@ -62,6 +63,7 @@ public class FilePaths {
 	
 	/** 100pct Scenario Unmodified */
 	public final static String PATH_NETWORK_BERLIN_100PCT = "data/input/Berlin100pct/network.final.xml.gz";
+	public final static String PATH_NETWORK_CHANGE_EVENTS_BERLIN_100PCT = "data/input/Berlin100pct/changeevents100.xml.gz";
 	public final static String PATH_POPULATION_BERLIN_100PCT_UNFILTERED = "data/input/Berlin100pct/population.100pct.unfiltered.base.xml.gz";
 	public final static String PATH_TRANSIT_SCHEDULE_BERLIN_100PCT = "data/input/Berlin100pct/transitSchedule.xml.gz";
 	public final static String PATH_TRANSIT_VEHICLES_BERLIN_100PCT = "data/input/Berlin100pct/transitVehicles.final.xml.gz";
