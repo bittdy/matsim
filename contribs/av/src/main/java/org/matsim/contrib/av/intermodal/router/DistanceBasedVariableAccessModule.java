@@ -162,6 +162,9 @@ public class DistanceBasedVariableAccessModule implements VariableAccessEgressTr
 		Leg leg = PopulationUtils.createLeg(mode);
 		Link startLink = NetworkUtils.getNearestLink(carnetwork, coord);
 		Link endLink = NetworkUtils.getNearestLink(carnetwork, toCoord);
+		if (startLink.equals(endLink)) {
+			mode = TransportMode.transit_walk;
+		}
 		Route route = new GenericRouteImpl(startLink.getId(),endLink.getId());
 		leg.setRoute(route);
 		if (this.teleportedModes.get(mode)){
