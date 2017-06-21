@@ -134,7 +134,7 @@ public class DistanceBasedVariableAccessModule implements VariableAccessEgressTr
 	 * @see playground.jbischoff.pt.VariableAccessEgressTravelDisutility#getAccessEgressModeAndTraveltime(org.matsim.api.core.v01.population.Person, org.matsim.api.core.v01.Coord, org.matsim.api.core.v01.Coord)
 	 */
 	@Override
-	public Leg getAccessEgressModeAndTraveltime(Person person, Coord coord, Coord toCoord, double time) {
+	public Leg getAccessEgressModeAndTraveltime(Person person, Coord coord, Coord toCoord, double time, boolean variableSurchargeOn) {
 		double egressDistance = CoordUtils.calcEuclideanDistance(coord, toCoord);
 		// return usual transit walk if the access / egress leg has neither origin nor destination in the area where variable access shall be used
 		String mode = TransportMode.transit_walk;
@@ -146,9 +146,9 @@ public class DistanceBasedVariableAccessModule implements VariableAccessEgressTr
 				discouragedTransitStopTimeSurcharge = discouragedCoord2TimeSurchargeFixed.get(coord);
 			} else if (discouragedCoord2TimeSurchargeFixed.containsKey(toCoord)) {
 				discouragedTransitStopTimeSurcharge = discouragedCoord2TimeSurchargeFixed.get(toCoord);
-			} else if (discouragedCoord2TimeSurchargeRandomOnOff.containsKey(coord) && rand.nextBoolean()) {
+			} else if (discouragedCoord2TimeSurchargeRandomOnOff.containsKey(coord) && variableSurchargeOn) {
 				discouragedTransitStopTimeSurcharge = discouragedCoord2TimeSurchargeRandomOnOff.get(coord);
-			} else if (discouragedCoord2TimeSurchargeRandomOnOff.containsKey(toCoord) && rand.nextBoolean()) {
+			} else if (discouragedCoord2TimeSurchargeRandomOnOff.containsKey(toCoord) && variableSurchargeOn) {
 				discouragedTransitStopTimeSurcharge = discouragedCoord2TimeSurchargeRandomOnOff.get(toCoord);
 			}
 		}
