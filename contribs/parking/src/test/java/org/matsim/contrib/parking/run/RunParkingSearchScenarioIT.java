@@ -1,9 +1,9 @@
 /* *********************************************************************** *
- * project: org.matsim.*												   *
+ * project: org.matsim.*
  *                                                                         *
  * *********************************************************************** *
  *                                                                         *
- * copyright       : (C) 2008 by the members listed in the COPYING,        *
+ * copyright       : (C) 2017 by the members listed in the COPYING,        *
  *                   LICENSE and WARRANTY file.                            *
  * email           : info at matsim dot org                                *
  *                                                                         *
@@ -16,32 +16,37 @@
  *   See also COPYING, LICENSE and WARRANTY file                           *
  *                                                                         *
  * *********************************************************************** */
+
+/**
+ * 
+ */
 package org.matsim.contrib.parking.run;
 
 import org.junit.Rule;
 import org.junit.Test;
-import org.matsim.contrib.parking.parkingchoice.run.RunParkingChoiceExample;
+import org.matsim.contrib.parking.parkingsearch.RunParkingSearchExample;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.testcases.MatsimTestUtils;
 
 /**
- * @author nagel
+ * @author  jbischoff
  *
  */
-public class RunParkingChoiceExampleTest {
+/**
+ *
+ */
+public class RunParkingSearchScenarioIT {
 	@Rule public MatsimTestUtils utils = new MatsimTestUtils() ;
-	
-	/**
-	 * Test method for {@link org.matsim.contrib.parking.parkingchoice.run.RunParkingChoiceExample#run(org.matsim.core.config.Config)}.
-	 */
+
 	@Test
-	public final void testRun() {
-		Config config = ConfigUtils.loadConfig("./src/main/resources/parkingchoice/config.xml");
-		config.controler().setOutputDirectory( utils.getOutputDirectory() );
+	public void testRunOneTaxi() {
+		String configFile = "./src/main/resources/parkingsearch/config.xml";
+		Config config = ConfigUtils.loadConfig(configFile);
 		config.controler().setLastIteration(0);
-		RunParkingChoiceExample.run(config);
+		config.controler().setOutputDirectory( utils.getOutputDirectory() );
+
+		new RunParkingSearchExample().run(config,false);
 		
 	}
-
 }
