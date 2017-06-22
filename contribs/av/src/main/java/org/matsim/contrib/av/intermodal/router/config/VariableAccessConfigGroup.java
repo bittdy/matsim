@@ -116,6 +116,7 @@ public class VariableAccessConfigGroup extends ReflectiveConfigGroup {
 	 * used for all routes originating or ending there. Outside this area variable
 	 * access is not used. Without any file given the default is to use variable
 	 * access for all routes.
+	 * Path relative to config file
 	 */
 	@StringSetter(AREA_FILE)
 	public void setVariableAccessAreaShpFile(String variableAccessAreaShpFile) {
@@ -144,6 +145,7 @@ public class VariableAccessConfigGroup extends ReflectiveConfigGroup {
 	 * applied to them. Can be used for example to make some TransitStops less attractive
 	 * than others. Is only applied to routes starting or ending in the variable access area
 	 * Without any file given the default is to use variable access for all routes.
+	 * Path relative to config file
 	 */
 	@StringGetter(COORDS2TIME_SURCHARGE_FILE)
 	public String getCoords2TimeSurchargeFile() {
@@ -154,7 +156,7 @@ public class VariableAccessConfigGroup extends ReflectiveConfigGroup {
 		return ConfigGroup.getInputFileURL(context, getCoords2TimeSurchargeFile() ) ;
 	}	
 	/**
-	 * @param coords2TimeSurchargeFile the coords2TimeSurchargeFile to set 
+	 * @param coords2TimeSurchargeFile path to the the coords2TimeSurchargeFile to set 
 	 * containing the coords and time surcharges
 	 * applied to them. Can be used for example to make some TransitStops less attractive
 	 * than others. Is only applied to routes starting or ending in the variable access area
