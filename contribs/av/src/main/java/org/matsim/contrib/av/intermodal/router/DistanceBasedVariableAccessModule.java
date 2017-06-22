@@ -26,6 +26,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -74,11 +75,23 @@ public class DistanceBasedVariableAccessModule implements VariableAccessEgressTr
 	private Map<String,Boolean> teleportedModes = new HashMap<>();
 	private Map<Integer,String> distanceMode = new TreeMap<>();
 	private Map<String, PreparedPolygon> geometriesVariableAccessArea = new HashMap<>();
-	 // time surcharge is only applied to trips starting or ending in the variable access area
-	/** full time surcharge always applied */
+	/* 
+	 * Time surcharges are only applied to trips starting or ending in the variable access area.
+	 * There are to types available: fixed and onOff time surcharges
+	 * 
+	 * It can be used to force the TransitRouter to search a route avoiding the TransitStop
+	 * located at the coordinate, e.g. if that stop is inaccessible due to a river between the 
+	 * variable access area and the TransitStop (-> fixed) or if the TransitStop is served very 
+	 * infrequently leading to excessive pt wait time (-> onOff, so routes via this TransitStop 
+	 * can be returned, but while rerouting at least one route avoiding it is returned as well).
+	 * 
+	 * If fromCoord and toCoord are subject to time surcharges these are added up. Also if the
+	 * same coord is subject to both a fixed and an onOff time surcharge, both are added up.
+	 */
+	/** fixed time surcharge: full time surcharge always applied */
 	private Map<Coord, Double> discouragedCoord2TimeSurchargeFixed = new HashMap<>();
-	/** choose randomly between no or full time surcharge to be applied */
-	private Map<Coord, Double> discouragedCoord2TimeSurchargeRandomOnOff = new HashMap<>();
+	/** onOff time surcharge: alternate between no or full time surcharge applied */
+	private Map<Coord, Double> discouragedCoord2TimeSurchargeOnOff = new HashMap<>();
 	private final Random rand = MatsimRandom.getRandom();
 	private final String variableAccessStyle;
 	private final double maxDistanceOnlyTransitWalkAvailable;
@@ -95,10 +108,11 @@ public class DistanceBasedVariableAccessModule implements VariableAccessEgressTr
 		this.carnetwork = carnetwork;
 		VariableAccessConfigGroup vaconfig = (VariableAccessConfigGroup) config.getModules().get(VariableAccessConfigGroup.GROUPNAME);
 		if (vaconfig.getVariableAccessAreaShpFile() != null && vaconfig.getVariableAccessAreaShpKey() != null) {
-			geometriesVariableAccessArea = readShapeFileAndExtractGeometry(vaconfig.getVariableAccessAreaShpFile(), vaconfig.getVariableAccessAreaShpKey());
+			geometriesVariableAccessArea = readShapeFileAndExtractGeometry(
+					vaconfig.getVariableAccessAreaShpFileURL(config.getContext()), vaconfig.getVariableAccessAreaShpKey());
 		}
 		if (vaconfig.getCoords2TimeSurchargeFile() != null) {
-			readCoord2SurchargeFile(vaconfig.getCoords2TimeSurchargeFile());
+			readCoord2SurchargeFile(vaconfig.getCoords2TimeSurchargeFileURL(config.getContext()));
 		}
 		variableAccessStyle = vaconfig.getStyle();
 		if (!(variableAccessStyle.equals("fixed") || variableAccessStyle.equals("flexible"))) {
@@ -138,18 +152,21 @@ public class DistanceBasedVariableAccessModule implements VariableAccessEgressTr
 		double egressDistance = CoordUtils.calcEuclideanDistance(coord, toCoord);
 		// return usual transit walk if the access / egress leg has neither origin nor destination in the area where variable access shall be used
 		String mode = TransportMode.transit_walk;
-		double discouragedTransitStopTimeSurcharge = 0;
+		double discouragedCoordTimeSurcharge = 0;
 		boolean isStartInVariableAccessArea = isInVariableAccessArea(coord);
 		boolean isEndInVariableAccessArea = isInVariableAccessArea(toCoord);
 		if (isStartInVariableAccessArea || isEndInVariableAccessArea) {
 			if (discouragedCoord2TimeSurchargeFixed.containsKey(coord)) {
-				discouragedTransitStopTimeSurcharge = discouragedCoord2TimeSurchargeFixed.get(coord);
-			} else if (discouragedCoord2TimeSurchargeFixed.containsKey(toCoord)) {
-				discouragedTransitStopTimeSurcharge = discouragedCoord2TimeSurchargeFixed.get(toCoord);
-			} else if (discouragedCoord2TimeSurchargeRandomOnOff.containsKey(coord) && variableSurchargeOn) {
-				discouragedTransitStopTimeSurcharge = discouragedCoord2TimeSurchargeRandomOnOff.get(coord);
-			} else if (discouragedCoord2TimeSurchargeRandomOnOff.containsKey(toCoord) && variableSurchargeOn) {
-				discouragedTransitStopTimeSurcharge = discouragedCoord2TimeSurchargeRandomOnOff.get(toCoord);
+				discouragedCoordTimeSurcharge += discouragedCoord2TimeSurchargeFixed.get(coord);
+			} 
+			if (discouragedCoord2TimeSurchargeFixed.containsKey(toCoord)) {
+				discouragedCoordTimeSurcharge += discouragedCoord2TimeSurchargeFixed.get(toCoord);
+			}
+			if (discouragedCoord2TimeSurchargeOnOff.containsKey(coord) && variableSurchargeOn) {
+				discouragedCoordTimeSurcharge += discouragedCoord2TimeSurchargeOnOff.get(coord);
+			}
+			if (discouragedCoord2TimeSurchargeOnOff.containsKey(toCoord) && variableSurchargeOn) {
+				discouragedCoordTimeSurcharge += discouragedCoord2TimeSurchargeOnOff.get(toCoord);
 			}
 		}
 		if (isStartInVariableAccessArea && isEndInVariableAccessArea){
@@ -179,7 +196,7 @@ public class DistanceBasedVariableAccessModule implements VariableAccessEgressTr
 				speed = config.plansCalcRoute().getModeRoutingParams().get(mode).getTeleportedModeSpeed();
 			}
 			double distance = egressDistance*distf;
-			double travelTime = distance / speed + discouragedTransitStopTimeSurcharge;
+			double travelTime = distance / speed + discouragedCoordTimeSurcharge;
 			leg.setTravelTime(travelTime);
 			route.setDistance(distance);
 			leg.setDepartureTime(time);
@@ -187,7 +204,7 @@ public class DistanceBasedVariableAccessModule implements VariableAccessEgressTr
 						
 		} else {
 			double distance = egressDistance*1.3;
-			double travelTime = distance / 7.5 + discouragedTransitStopTimeSurcharge;
+			double travelTime = distance / 7.5 + discouragedCoordTimeSurcharge;
 			leg.setTravelTime(travelTime);
 			route.setDistance(distance);
 			
@@ -262,9 +279,9 @@ public class DistanceBasedVariableAccessModule implements VariableAccessEgressTr
 		return this.teleportedModes.get(mode);
 	}
 	
-	public static Map<String, PreparedPolygon> readShapeFileAndExtractGeometry(String filename, String key){
+	public static Map<String, PreparedPolygon> readShapeFileAndExtractGeometry(URL fileURL, String key){
 		Map<String,PreparedPolygon> geometry = new HashMap<>();	
-		for (SimpleFeature ft : ShapeFileReader.getAllFeatures(filename)) {
+		for (SimpleFeature ft : ShapeFileReader.getAllFeatures(fileURL.getFile())) {
 			
 				GeometryFactory geometryFactory= new GeometryFactory();
 				WKTReader wktReader = new WKTReader(geometryFactory);
@@ -296,9 +313,9 @@ public class DistanceBasedVariableAccessModule implements VariableAccessEgressTr
 		}
 	}
 	
-	private void readCoord2SurchargeFile(String filename){
+	private void readCoord2SurchargeFile(URL fileURL){
 		try {
-			BufferedReader coords2SurchargeReader = new BufferedReader(new FileReader(filename));
+			BufferedReader coords2SurchargeReader = new BufferedReader(new FileReader(fileURL.getFile()));
 			String line;
 			// check header
 			if (coords2SurchargeReader.readLine().equals("coordX,coordY,timeSurcharge,type")) {
@@ -309,8 +326,8 @@ public class DistanceBasedVariableAccessModule implements VariableAccessEgressTr
 						Coord coord = new Coord(Double.parseDouble(lineSplits[0]), Double.parseDouble(lineSplits[1]));
 						if(lineSplits[3].equals("fixed")){
 							discouragedCoord2TimeSurchargeFixed.put(coord, Double.parseDouble(lineSplits[2]));
-						} else if (lineSplits[3].equals("randomOnOff")) {
-							discouragedCoord2TimeSurchargeRandomOnOff.put(coord, Double.parseDouble(lineSplits[2]));
+						} else if (lineSplits[3].equals("onOff")) {
+							discouragedCoord2TimeSurchargeOnOff.put(coord, Double.parseDouble(lineSplits[2]));
 						} else {
 							throw new RuntimeException("unknown discouragedCoord2TimeSurcharge type: " + 
 									lineSplits[3]);
