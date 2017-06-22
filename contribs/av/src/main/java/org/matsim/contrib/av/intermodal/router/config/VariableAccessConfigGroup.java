@@ -106,7 +106,7 @@ public class VariableAccessConfigGroup extends ReflectiveConfigGroup {
 		return variableAccessAreaShpFile;
 	}
 	
-	public URL getVariableAccessAreaShpFile(URL context) {
+	public URL getVariableAccessAreaShpFileURL(URL context) {
 		return ConfigGroup.getInputFileURL(context, getVariableAccessAreaShpFile() ) ;
 	}	
 	/**
