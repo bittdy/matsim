@@ -150,7 +150,7 @@ public class VariableAccessConfigGroup extends ReflectiveConfigGroup {
 		return coords2TimeSurchargeFile;
 	}
 	
-	public URL getCoords2TimeSurchargeFile(URL context) {
+	public URL getCoords2TimeSurchargeFileURL(URL context) {
 		return ConfigGroup.getInputFileURL(context, getCoords2TimeSurchargeFile() ) ;
 	}	
 	/**
