@@ -55,12 +55,12 @@ public class CreateTaxiVehicles {
 	 */
 	public static void main(String[] args) {
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-		int numberofVehicles = 50;
+		int numberofVehicles = 400;
 		double operationStartTime = 0.; //t0
 		double operationEndTime = 2*24*3600.;	//t1
-		int seats = 4;
-		String networkfile = FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_NETWORK_BERLIN__10PCT;
-		String taxisFile = FilePaths.PATH_BASE_DIRECTORY + "data/input/Berlin10pct/DRT/DRTVehicles.10pct.DRT_" + numberofVehicles + "_Cap" + seats + ".xml";// FilePaths.PATH_DRT_VEHICLES_20_CAP1_BERLIN__10PCT;
+		int seats = 1;
+		String networkfile = FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_NETWORK_BERLIN_100PCT_ACCESS_LOOPS;
+		String taxisFile = FilePaths.PATH_BASE_DIRECTORY + "data/input/Berlin100pct/drt/DrtVehicles.100pct.DRT_" + numberofVehicles + "_Cap" + seats + ".xml";// FilePaths.PATH_DRT_VEHICLES_20_CAP1_BERLIN__10PCT;
 		List<Vehicle> vehicles = new ArrayList<>();
 		Random random = MatsimRandom.getLocalInstance();
 		Geometry geometryStudyArea = JbUtils.readShapeFileAndExtractGeometry(FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_AV_OPERATION_AREA_SHP, FilePaths.AV_OPERATION_AREA_SHP_KEY).get(FilePaths.AV_OPERATION_AREA_SHP_ELEMENT);
