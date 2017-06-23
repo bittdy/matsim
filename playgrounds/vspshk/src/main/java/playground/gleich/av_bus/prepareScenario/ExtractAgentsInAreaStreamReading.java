@@ -13,6 +13,7 @@ import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.network.io.MatsimNetworkReader;
 import org.matsim.core.population.algorithms.PersonAlgorithm;
 import org.matsim.core.population.io.StreamingPopulationReader;
+import org.matsim.core.population.io.StreamingPopulationWriter;
 import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
@@ -88,16 +89,16 @@ public class ExtractAgentsInAreaStreamReading {
 					outputLinksInAreaShpPath, outputLinksInAreaShpCoordinateSystem);
 			
 		} else {
-			String inputNetworkPath = FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_NETWORK_BERLIN__10PCT;
-			String inputPopulationPath = FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_POPULATION_BERLIN__10PCT_UNFILTERED;
+			String inputNetworkPath = FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_NETWORK_BERLIN_100PCT_ACCESS_LOOPS;
+			String inputPopulationPath = FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_POPULATION_BERLIN_100PCT_UNFILTERED;
 			String studyAreaShpPath =FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_STUDY_AREA_SHP;
 			String studyAreaShpKey = FilePaths.STUDY_AREA_SHP_KEY;
 			String studyAreaShpElement = FilePaths.STUDY_AREA_SHP_ELEMENT;
-			String outputPopulationPath = FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_POPULATION_BERLIN__10PCT_FILTERED;
+			String outputPopulationPath = FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_POPULATION_BERLIN_100PCT_FILTERED;
 			boolean selectAgentsByRoutesThroughArea = true;
 			boolean selectAgentsByActivitiesInArea = true;
-			String outputLinksInAreaCsvPath = FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_LINKS_ENCLOSED_IN_AREA_BERLIN__10PCT;
-			String outputLinksInAreaShpPath = FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_SHP_LINKS_ENCLOSED_IN_AREA_BERLIN__10PCT;
+			String outputLinksInAreaCsvPath = FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_LINKS_ENCLOSED_IN_AREA_BERLIN_100PCT;
+			String outputLinksInAreaShpPath = FilePaths.PATH_BASE_DIRECTORY + FilePaths.PATH_SHP_LINKS_ENCLOSED_IN_AREA_BERLIN_100PCT;
 			String outputLinksInAreaShpCoordinateSystem = "DHDN_GK4";
 			extractor = new ExtractAgentsInAreaStreamReading(inputNetworkPath, inputPopulationPath, studyAreaShpPath, 
 					studyAreaShpKey, studyAreaShpElement, outputPopulationPath, selectAgentsByActivitiesInArea, 
@@ -138,6 +139,8 @@ public class ExtractAgentsInAreaStreamReading {
 	private void run(){
 		initialize();
 		System.out.println("initialize done");
+		StreamingPopulationWriter popWriter = new StreamingPopulationWriter();
+		popWriter.writeStartPlans(outputPopulationPath);
 		
 		StreamingPopulationReader spr = new StreamingPopulationReader(inputScenario);
 		spr.addAlgorithm(new PersonAlgorithm() {
@@ -146,24 +149,26 @@ public class ExtractAgentsInAreaStreamReading {
 			public void run(Person person) {
 				if(selectAgentsByRoutesThroughArea){
 					if(hasRouteThroughArea(person)){
-						outputScenario.getPopulation().addPerson(person);
+						removeTransitActsCarRoutesDepartureTimesAndActivityLinkIds(person);
+						popWriter.writePerson(person);
 					} else if(selectAgentsByActivitiesInArea){
 						if(hasActivityInArea(person)){
-							outputScenario.getPopulation().addPerson(person);
+							removeTransitActsCarRoutesDepartureTimesAndActivityLinkIds(person);
+							popWriter.writePerson(person);
 						}
 					}
 				} else if(selectAgentsByActivitiesInArea){
 					if(hasActivityInArea(person)){
-						outputScenario.getPopulation().addPerson(person);
+						removeTransitActsCarRoutesDepartureTimesAndActivityLinkIds(person);
+						popWriter.writePerson(person);
 					}
 				}
 			}
 		}
 				);
 		spr.readFile(inputPopulationPath);
+		popWriter.writeEndPlans();
 		System.out.println("ExtractAgentsInArea done");
-		removeTransitActsCarRoutesDepartureTimesAndActivityLinkIds();
-		new PopulationWriter(outputScenario.getPopulation()).writeV4(outputPopulationPath);
 	}
 	
 	private void initialize(){		
@@ -261,22 +266,20 @@ public class ExtractAgentsInAreaStreamReading {
 		return false;
 	}
 
-	private void removeTransitActsCarRoutesDepartureTimesAndActivityLinkIds(){
-		for (Person p : outputScenario.getPopulation().getPersons().values()){
-			Plan plan = p.getSelectedPlan();
-			new TransitActsRemover().run(plan);
-			for (PlanElement pe : plan.getPlanElements()){
-				if (pe instanceof Leg){
-					Leg leg = (Leg) pe;
-					leg.setDepartureTime(Time.UNDEFINED_TIME);
-					leg.setTravelTime(Time.UNDEFINED_TIME);
-					leg.setRoute(null);
-				} else if (pe instanceof Activity){
-					Activity act =  (Activity) pe;
-					act.setLinkId(null);
-					act.setFacilityId(null);
-					act.setStartTime(Time.UNDEFINED_TIME);
-				}
+	private void removeTransitActsCarRoutesDepartureTimesAndActivityLinkIds(Person p){
+		Plan plan = p.getSelectedPlan();
+		new TransitActsRemover().run(plan);
+		for (PlanElement pe : plan.getPlanElements()){
+			if (pe instanceof Leg){
+				Leg leg = (Leg) pe;
+				leg.setDepartureTime(Time.UNDEFINED_TIME);
+				leg.setTravelTime(Time.UNDEFINED_TIME);
+				leg.setRoute(null);
+			} else if (pe instanceof Activity){
+				Activity act =  (Activity) pe;
+				act.setLinkId(null);
+				act.setFacilityId(null);
+				act.setStartTime(Time.UNDEFINED_TIME);
 			}
 		}
 	}
