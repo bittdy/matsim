@@ -26,8 +26,10 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.TransportMode;
@@ -37,6 +39,7 @@ import org.matsim.api.core.v01.network.Node;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Route;
+import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.routes.GenericRouteImpl;
@@ -64,6 +67,7 @@ import org.matsim.pt.transitSchedule.api.TransitStopFacility;
  * Not thread-safe because MultiNodeDijkstra is not. Does not expect the TransitSchedule to change once constructed! michaz '13
  *
  * @author jbischoff
+ * @author gleich
  */
 public class VariableAccessTransitRouterImpl implements TransitRouter {
 
@@ -73,7 +77,9 @@ public class VariableAccessTransitRouterImpl implements TransitRouter {
 	private final TransitTravelDisutility travelDisutility;
 	private final TravelTime travelTime;
 	private final VariableAccessEgressTravelDisutility variableAccessEgressTravelDisutility;
-	private Set<Id<Person>> personsLastRoutingVariableSurchargeOn = new HashSet<>();
+	private boolean variableSurchargeOn;
+	private final Random rand = MatsimRandom.getRandom();
+	private Logger log = Logger.getLogger(VariableAccessTransitRouterImpl.class);
 
 	private final PreparedTransitSchedule preparedTransitSchedule;
 
@@ -86,6 +92,7 @@ public class VariableAccessTransitRouterImpl implements TransitRouter {
 			final TravelTime travelTime,
 			final TransitTravelDisutility travelDisutility, final VariableAccessEgressTravelDisutility variableAccessEgressTravelDisutility,
 			final Network network) {
+		log.warn("VariableAccessTransitRouterImpl started");
 		this.config = config;
 		this.transitNetwork = routerNetwork;
 		this.travelTime = travelTime;
@@ -93,6 +100,12 @@ public class VariableAccessTransitRouterImpl implements TransitRouter {
 		this.preparedTransitSchedule = preparedTransitSchedule;
 		this.variableAccessEgressTravelDisutility = variableAccessEgressTravelDisutility;
 		this.network = network;
+		/* Before each iteration a new VariableAccessTransitRouterImpl is instantiated for each thread.
+		 * Therefore any information whether an agent was routed last time with variableSurcharge or without
+		 * is lost. As a temporary solution, let at each instantiation choose by random, if the
+		 * variableSurcharge is applied (to all agents routed by this instance) or not.
+		 */
+		this.variableSurchargeOn = rand.nextBoolean();
 	}
 
 	// find the nearest pt stops in order to calculate the shortest path
@@ -111,14 +124,6 @@ public class VariableAccessTransitRouterImpl implements TransitRouter {
 		 * another discouraged pt stop. When the same agent is routed the next time, no surcharge will be added to any of the
 		 * randomOnOff discouraged pt stop. See also DistanceBasedVariableAccessModule
 		 */
-		boolean variableSurchargeOn;
-		if (personsLastRoutingVariableSurchargeOn.contains(person.getId())) {
-			personsLastRoutingVariableSurchargeOn.remove(person.getId());
-			variableSurchargeOn = false;
-		} else {
-			personsLastRoutingVariableSurchargeOn.add(person.getId());
-			variableSurchargeOn = true;
-		}
 		for (TransitRouterNetworkNode node : nearestNodes) {
 			Coord toCoord = node.stop.getStopFacility().getCoord();
 			Leg initialLeg = getAccessEgressLeg(person, coord, toCoord, departureTime, variableSurchargeOn);
