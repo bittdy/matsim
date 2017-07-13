@@ -92,7 +92,7 @@ public class VariableAccessTransitRouterImpl implements TransitRouter {
 			final TravelTime travelTime,
 			final TransitTravelDisutility travelDisutility, final VariableAccessEgressTravelDisutility variableAccessEgressTravelDisutility,
 			final Network network) {
-		log.warn("VariableAccessTransitRouterImpl started");
+		log.info("VariableAccessTransitRouterImpl started");
 		this.config = config;
 		this.transitNetwork = routerNetwork;
 		this.travelTime = travelTime;
