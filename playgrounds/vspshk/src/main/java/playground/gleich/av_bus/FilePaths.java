@@ -58,7 +58,8 @@ public class FilePaths {
 	/** 100pct Scenario */
 	public final static String PATH_NETWORK_BERLIN_100PCT = "data/input/Berlin100pct/network/network.10pct.base.xml.gz";
 	public final static String PATH_NETWORK_BERLIN_100PCT_ACCESS_LOOPS = "data/input/Berlin100pct/network/network.100pct.drtAccessLoops.xml";
-	public final static String PATH_NETWORK_CHANGE_EVENTS_BERLIN_100PCT = "data/input/Berlin100pct/network/networkChangeEvents.100pct.xml.gz";
+	public final static String PATH_NETWORK_CHANGE_EVENTS_BERLIN_100PCT = "data/input/Berlin100pct/network/networkChangeEvents.100pct.base.xml.gz";
+	public final static String PATH_NETWORK_CHANGE_EVENTS_BERLIN_100PCT_WITHOUT_STUDY_AREA = "data/input/Berlin100pct/network/networkChangeEvents.100pct.withoutStudyArea.xml.gz";
 	public final static String PATH_POPULATION_BERLIN_100PCT_UNFILTERED = "data/input/Berlin100pct/population/population.100pct.unfiltered_base.xml.gz";
 	public final static String PATH_TRANSIT_SCHEDULE_BERLIN_100PCT = "data/input/Berlin100pct/pt/transitSchedule.100pct.base.xml.gz";
 	public final static String PATH_TRANSIT_VEHICLES_BERLIN_100PCT = "data/input/Berlin100pct/pt/transitVehicles.100pct.base.xml.gz";
