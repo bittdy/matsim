@@ -96,7 +96,7 @@ public class ExperiencedTripsWriter {
 	public void writeExperiencedLegs() {
 		try {
 			// add header for leg
-			bw.write(sep + "legNr" + "legFromLinkId" + sep + "legToLinkId" + sep +
+			bw.write(sep + "legNr" + sep + "legFromLinkId" + sep + "legToLinkId" + sep +
 					"legStartTime" + sep + "legEndTime" + sep +
 					"legMode" + sep + "legWaitTime" + sep + "legGrossWaitTime" + sep +
 					"legInVehicleTime" + sep + "legDistance" + sep + "legTransitRouteId" + sep +
