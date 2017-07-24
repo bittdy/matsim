@@ -1,10 +1,16 @@
 package playground.gleich.av_bus.runScenario;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
+import org.matsim.api.core.v01.network.Link;
 import org.matsim.contrib.av.intermodal.router.VariableAccessTransitRouterModule;
 import org.matsim.contrib.av.intermodal.router.config.VariableAccessConfigGroup;
 import org.matsim.contrib.drt.run.DrtConfigConsistencyChecker;
@@ -47,7 +53,26 @@ public class RunDrt {
 		monitoredModes.add(TransportMode.transit_walk);
 		monitoredModes.add("drt");
 		
-		DrtPtTripEventHandler eventHandler = new DrtPtTripEventHandler(scenario.getNetwork(), scenario.getTransitSchedule(), monitoredModes, null);
+		Set<Id<Link>> monitoredStartAndEndLinks = new HashSet<>();
+		try {
+			BufferedReader reader = new BufferedReader(new FileReader(IOUtils.newUrl(config.getContext(), "../network/linksInArea.csv").getFile()));
+			if (reader.readLine().startsWith("id")) {
+				for (String line = reader.readLine(); line != null; line = reader.readLine()) {
+					monitoredStartAndEndLinks.add(Id.createLinkId(line.split(",")[0]));
+				}
+				reader.close();
+			} else {
+				reader.close();
+				throw new RuntimeException("linksInArea.csv : first column in header should be id.");
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		DrtPtTripEventHandler eventHandler = new DrtPtTripEventHandler(scenario.getNetwork(), scenario.getTransitSchedule(), 
+				monitoredModes, monitoredStartAndEndLinks);
 		events.addHandler(eventHandler);
 		new DrtEventsReader(events).readFile(config.controler().getOutputDirectory() + "/output_events.xml.gz");
 		System.out.println("Start writing trips of " + eventHandler.getPerson2ExperiencedTrips().size() + " agents.");
