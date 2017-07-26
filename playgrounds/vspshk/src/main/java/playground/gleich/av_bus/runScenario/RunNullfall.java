@@ -15,7 +15,7 @@ import playground.gleich.av_bus.FilePaths;
 public class RunNullfall {
 
 	public static void main(String[] args) {
-		Config config = ConfigUtils.loadConfig("/Users/gleich/Desktop/aktuell/test_input_config.xml");
+		Config config = ConfigUtils.loadConfig("/Users/gleich/Desktop/aktuell/test_input_config_ohne_VA.xml");
 		Scenario scenario = ScenarioUtils.loadScenario(config);
 		Controler controler = new Controler(scenario);
 		controler.run();
