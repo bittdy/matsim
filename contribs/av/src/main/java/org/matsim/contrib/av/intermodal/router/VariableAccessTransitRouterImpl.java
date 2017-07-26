@@ -22,16 +22,13 @@ package org.matsim.contrib.av.intermodal.router;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
@@ -128,8 +125,28 @@ public class VariableAccessTransitRouterImpl implements TransitRouter {
 			Coord toCoord = node.stop.getStopFacility().getCoord();
 			Leg initialLeg = getAccessEgressLeg(person, coord, toCoord, departureTime, variableSurchargeOn);
 			double initialTime = initialLeg.getTravelTime();
-			//variable access: only use time as disutility for the time being
-			wrappedNearestNodes.put(node, new InitialNode(initialTime, initialTime + departureTime));
+			double initialCost;
+			if (initialLeg.getMode().equals(TransportMode.transit_walk) || initialLeg.getMode().equals(TransportMode.walk) ||
+					initialLeg.getMode().equals(TransportMode.access_walk) || initialLeg.getMode().equals(TransportMode.egress_walk)) {
+				//  getMarginalUtilityOfTravelTimeWalk INCLUDES the opportunity cost of time.  kai, dec'12
+				double timeCost = - initialTime * config.getMarginalUtilityOfTravelTimeWalk_utl_s() ;
+				// (sign: margUtl is negative; overall it should be positive because it is a cost.)
+				double distanceCost = - initialLeg.getRoute().getDistance() * config.getMarginalUtilityOfTravelDistancePt_utl_m() ;
+				// (sign: same as above)
+				initialCost = timeCost + distanceCost;
+			} else if (initialLeg.getMode().equals("drt")) {
+				// this.marginalUtilityOfTravelTimeWalk_utl_s = pcsConfig.getModes().get(TransportMode.walk).getMarginalUtilityOfTraveling() /3600.0 - pcsConfig.getPerforming_utils_hr()/3600. ;
+				double marginalUtilityOfTravelTimeDrt_utl_s = -4.0 / 3600 - 6.0 / 3600;
+				double marginalUtilityOfTravelDistanceDrt_utl_m = 0;
+				double timeCost = - initialTime * marginalUtilityOfTravelTimeDrt_utl_s;
+				// (sign: margUtl is negative; overall it should be positive because it is a cost.)
+				double distanceCost = - initialLeg.getRoute().getDistance() * marginalUtilityOfTravelDistanceDrt_utl_m ;
+				// (sign: same as above)
+				initialCost = timeCost + distanceCost;
+			} else {
+				throw new RuntimeException("Unable to provide initialCost for mode " + initialLeg.getMode() + " for which no marginal utility parameters are set in TransitRouterConfigGroup");
+			}
+			wrappedNearestNodes.put(node, new InitialNode(initialCost, initialTime + departureTime));
 		}
 		return wrappedNearestNodes;
 	}
