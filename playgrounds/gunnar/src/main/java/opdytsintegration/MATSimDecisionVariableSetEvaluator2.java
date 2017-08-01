@@ -198,7 +198,7 @@ public class MATSimDecisionVariableSetEvaluator2<U extends DecisionVariable>
 		// this.eventsManager.addHandler(this.ptOccupancyAnalyzer);
 		// }
 
-		this.trajectorySampler.initialize();
+//		this.trajectorySampler.initialize();
 
 		// TODO NEW
 		this.justStarted = true;
