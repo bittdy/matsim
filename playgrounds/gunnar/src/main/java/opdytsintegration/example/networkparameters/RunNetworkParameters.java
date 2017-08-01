@@ -206,7 +206,7 @@ public class RunNetworkParameters {
 		 * 
 		 */
 
-		randomSearch.run(selfTuner);
+//		randomSearch.run(selfTuner);
 
 		System.out.println("... DONE.");
 	}

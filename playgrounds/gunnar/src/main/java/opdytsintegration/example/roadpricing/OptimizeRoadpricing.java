@@ -178,14 +178,14 @@ class OptimizeRoadpricing {
 		/*
 		 * RandomSearch specification.
 		 */
-		final RandomSearch<TollLevels> randomSearch = new RandomSearch<>(matsimSimulator, decisionVariableRandomizer,
-				initialTollLevels, convergenceCriterion, maxRandomSearchIterations, maxRandomSearchTransitions,
-				randomSearchPopulationSize, MatsimRandom.getRandom(), parallelSampling, objectiveFunction,
-				includeCurrentBest);
-		randomSearch.setLogFileName(originalOutputDirectory + "opdyts.log");
-		randomSearch.setConvergenceTrackingFileName(originalOutputDirectory + "opdyts.con");
-		randomSearch.setOuterIterationLogFileName(originalOutputDirectory + "opdyts.opt");
-		randomSearch.setMaxTotalMemory(averageIterations);
+//		final RandomSearch<TollLevels> randomSearch = new RandomSearch<>(matsimSimulator, decisionVariableRandomizer,
+//				initialTollLevels, convergenceCriterion, maxRandomSearchIterations, maxRandomSearchTransitions,
+//				randomSearchPopulationSize, MatsimRandom.getRandom(), parallelSampling, objectiveFunction,
+//				includeCurrentBest);
+//		randomSearch.setLogFileName(originalOutputDirectory + "opdyts.log");
+//		randomSearch.setConvergenceTrackingFileName(originalOutputDirectory + "opdyts.con");
+//		randomSearch.setOuterIterationLogFileName(originalOutputDirectory + "opdyts.opt");
+//		randomSearch.setMaxTotalMemory(averageIterations);
 
 		/*
 		 * Run it.
@@ -193,9 +193,9 @@ class OptimizeRoadpricing {
 		if (adjustWeights) {
 			final SelfTuner selfTuner = new SelfTuner(0.95);
 			selfTuner.setNoisySystem(true);
-			randomSearch.run(selfTuner);
+//			randomSearch.run(selfTuner);
 		} else {
-			randomSearch.run(initialEquilibriumWeight, initialUniformityWeight);
+//			randomSearch.run(initialEquilibriumWeight, initialUniformityWeight);
 		}
 
 		System.out.println("... DONE.");
