@@ -234,28 +234,28 @@ public class MatsimOpdytsEquilMixedTrafficIntegration {
 		// what would decide the convergence of the objective function
 		ConvergenceCriterion convergenceCriterion = new FixedIterationNumberConvergenceCriterion(opdytsConfigGroup.getNumberOfIterationsForConvergence(), opdytsConfigGroup.getNumberOfIterationsForAveraging());
 
-		RandomSearch<ModeChoiceDecisionVariable> randomSearch = new RandomSearch<>(
-				simulator,
-				decisionVariableRandomizer,
-				initialDecisionVariable,
-				convergenceCriterion,
-				opdytsConfigGroup.getMaxIteration(), // this many times simulator.run(...) and thus controler.run() will be called.
-				opdytsConfigGroup.getMaxTransition(),
-				opdytsConfigGroup.getPopulationSize(),
-				MatsimRandom.getRandom(),
-				opdytsConfigGroup.isInterpolate(),
-				objectiveFunction,
-				opdytsConfigGroup.isIncludeCurrentBest()
-				);
+//		RandomSearch<ModeChoiceDecisionVariable> randomSearch = new RandomSearch<>(
+//				simulator,
+//				decisionVariableRandomizer,
+//				initialDecisionVariable,
+//				convergenceCriterion,
+//				opdytsConfigGroup.getMaxIteration(), // this many times simulator.run(...) and thus controler.run() will be called.
+//				opdytsConfigGroup.getMaxTransition(),
+//				opdytsConfigGroup.getPopulationSize(),
+//				MatsimRandom.getRandom(),
+//				opdytsConfigGroup.isInterpolate(),
+//				objectiveFunction,
+//				opdytsConfigGroup.isIncludeCurrentBest()
+//				);
 
 		// probably, an object which decide about the inertia
 		SelfTuner selfTuner = new SelfTuner(opdytsConfigGroup.getInertia());
 		selfTuner.setWeightScale(opdytsConfigGroup.getSelfTuningWeight());
 
-		randomSearch.setLogPath(opdytsConfigGroup.getOutputDirectory());
+//		randomSearch.setLogPath(opdytsConfigGroup.getOutputDirectory());
 
 		// run it, this will eventually call simulator.run() and thus controler.run
-		randomSearch.run(selfTuner );
+//		randomSearch.run(selfTuner );
 
 
 		OpdytsConvergenceChart opdytsConvergencePlotter = new OpdytsConvergenceChart();

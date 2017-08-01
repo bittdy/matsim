@@ -220,27 +220,27 @@ public class MatsimOpdytsEquilIntegration {
 		final int averagingIterations = 10;
 		ConvergenceCriterion convergenceCriterion = new FixedIterationNumberConvergenceCriterion(iterationsToConvergence, averagingIterations);
 
-		RandomSearch<ModeChoiceDecisionVariable> randomSearch = new RandomSearch<>(
-				simulator,
-				decisionVariableRandomizer,
-				initialDecisionVariable,
-				convergenceCriterion,
-				maxIterations, // this many times simulator.run(...) and thus controler.run() will be called.
-				maxTransitions,
-				populationSize,
-				MatsimRandom.getRandom(),
-				interpolate,
-				objectiveFunction,
-				includeCurrentBest
-				);
+//		RandomSearch<ModeChoiceDecisionVariable> randomSearch = new RandomSearch<>(
+//				simulator,
+//				decisionVariableRandomizer,
+//				initialDecisionVariable,
+//				convergenceCriterion,
+//				maxIterations, // this many times simulator.run(...) and thus controler.run() will be called.
+//				maxTransitions,
+//				populationSize,
+//				MatsimRandom.getRandom(),
+//				interpolate,
+//				objectiveFunction,
+//				includeCurrentBest
+//				);
 
 		// probably, an object which decide about the inertia
 		SelfTuner selfTuner = new SelfTuner(0.95);
 
-		randomSearch.setLogPath(OUT_DIR);
+//		randomSearch.setLogPath(OUT_DIR);
 
 		// run it, this will eventually call simulator.run() and thus controler.run
-		randomSearch.run(selfTuner );
+//		randomSearch.run(selfTuner );
 
 		// remove the unused iterations
 		for (int index =0; index < maxIterations; index++) {
