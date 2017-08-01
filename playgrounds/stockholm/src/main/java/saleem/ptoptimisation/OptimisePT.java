@@ -93,21 +93,21 @@ public class OptimisePT {
 		// <<<<< NEW, UNTESTED <<<<<
 		
 		matsimSimulator.setReplacingModules(module);
-		final RandomSearch<PTSchedule> randomSearch = new RandomSearch<>(
-				matsimSimulator, decisionVariableRandomizer, ptschedule,
-				convergenceCriterion, maxRandomSearchIterations,
-				maxRandomSearchTransitions, 8,
-				MatsimRandom.getRandom(), interpolate, objectiveFunction,
-				includeCurrentBest);
-		new CreatePseudoNetwork(schedule, network, "tr_").createNetwork();
-		randomSearch.setLogFileName(originalOutputDirectory + "opdyts.log");
-		randomSearch.setConvergenceTrackingFileName(originalOutputDirectory
-				+ "opdyts.con");
-		randomSearch.setOuterIterationLogFileName(originalOutputDirectory
-				+ "opdyts.opt");
-		final SelfTuner tuner = new SelfTuner(0.95);
-		tuner.setNoisySystem(true);
-		randomSearch.run(tuner);
-		System.out.println("... DONE.");
+//		final RandomSearch<PTSchedule> randomSearch = new RandomSearch<>(
+//				matsimSimulator, decisionVariableRandomizer, ptschedule,
+//				convergenceCriterion, maxRandomSearchIterations,
+//				maxRandomSearchTransitions, 8,
+//				MatsimRandom.getRandom(), interpolate, objectiveFunction,
+//				includeCurrentBest);
+//		new CreatePseudoNetwork(schedule, network, "tr_").createNetwork();
+//		randomSearch.setLogFileName(originalOutputDirectory + "opdyts.log");
+//		randomSearch.setConvergenceTrackingFileName(originalOutputDirectory
+//				+ "opdyts.con");
+//		randomSearch.setOuterIterationLogFileName(originalOutputDirectory
+//				+ "opdyts.opt");
+//		final SelfTuner tuner = new SelfTuner(0.95);
+//		tuner.setNoisySystem(true);
+//		randomSearch.run(tuner);
+//		System.out.println("... DONE.");
 	}
 }
